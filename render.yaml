@@ -1,0 +1,65 @@
+# Render Blueprint — the whole app on Render, all free tier:
+#   database  (PostgreSQL)   cargo-admin-db
+#   API       (web service)  cargo-admin-api
+#   frontend  (static site)  cargo-admin-web
+#
+# Usage: push this repo to GitHub, then in Render: New +  ->  Blueprint  ->  pick this repo.
+# Render asks for the values marked `sync: false` (see DEPLOY.md for the exact steps).
+#
+# NOTE — Render's free PostgreSQL expires ~30 days after creation. To keep the data
+# permanently, use a free Neon database instead: delete the `databases:` block below and
+# replace the DATABASE_URL entry with:   - key: DATABASE_URL
+#                                          sync: false     # paste the Neon connection string
+
+databases:
+  - name: cargo-admin-db
+    plan: free
+    region: singapore
+    databaseName: cargo_admin
+    user: cargo_admin
+
+services:
+  # ---------------- API ----------------
+  - type: web
+    name: cargo-admin-api
+    runtime: node
+    plan: free
+    region: singapore
+    rootDir: server
+    buildCommand: npm install && npm run render-build   # installs, then creates/updates the tables
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "20"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: cargo-admin-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true       # Render creates a strong random secret
+      - key: JWT_EXPIRES_IN
+        value: 12h
+      - key: SEED_ADMIN_PASSWORD  # password for the "admin" login (required in production)
+        sync: false
+      - key: SEED_STAFF_PASSWORD  # password for the "staff" login (required in production)
+        sync: false
+
+  # ---------------- Frontend ----------------
+  - type: web
+    name: cargo-admin-web
+    runtime: static
+    rootDir: client
+    buildCommand: npm install --include=dev && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: VITE_API_BASE_URL    # the API's public URL, e.g. https://cargo-admin-api.onrender.com
+        sync: false
+    routes:
+      - type: rewrite             # lets /orders/5 etc. work when the page is refreshed
+        source: /*
+        destination: /index.html

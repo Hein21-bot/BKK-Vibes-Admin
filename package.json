@@ -1,0 +1,13 @@
+{
+  "name": "cargo-admin",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Full-stack online shop & cargo management admin system",
+  "scripts": {
+    "install:all": "npm --prefix server install && npm --prefix client install",
+    "setup": "npm --prefix server run db:push && npm --prefix server run seed",
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "build": "npm --prefix client run build"
+  }
+}

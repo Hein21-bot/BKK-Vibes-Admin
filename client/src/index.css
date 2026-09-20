@@ -1,0 +1,89 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --c-page: 241 245 249; /* slate-100 */
+  --c-panel: 255 255 255;
+  --c-panel-2: 248 250 252; /* slate-50 */
+  --c-edge: 226 232 240; /* slate-200 */
+  --c-ink: 15 23 42; /* slate-900 */
+  --c-ink-2: 71 85 105; /* slate-600 */
+}
+
+.dark {
+  --c-page: 2 6 23; /* slate-950 */
+  --c-panel: 15 23 42; /* slate-900 */
+  --c-panel-2: 30 41 59; /* slate-800 */
+  --c-edge: 30 41 59; /* slate-800 */
+  --c-ink: 226 232 240; /* slate-200 */
+  --c-ink-2: 148 163 184; /* slate-400 */
+}
+
+/* Printing (vouchers): always use the light palette, even when the app is in dark mode. */
+@media print {
+  /* No page margin => the browser has no room to print its own header/footer
+     (page title, date, URL, page number). The voucher pads itself instead. */
+  @page {
+    margin: 0;
+  }
+  :root,
+  .dark {
+    --c-page: 255 255 255;
+    --c-panel: 255 255 255;
+    --c-panel-2: 248 250 252;
+    --c-edge: 226 232 240;
+    --c-ink: 15 23 42;
+    --c-ink-2: 71 85 105;
+  }
+}
+
+/* Don't split a table row across two printed pages. */
+.voucher tr {
+  break-inside: avoid;
+}
+
+/* Make browsers print the black table header instead of dropping background colours. */
+.voucher,
+.voucher * {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+@layer base {
+  body {
+    @apply bg-page text-ink antialiased;
+  }
+}
+
+@layer components {
+  .input {
+    @apply w-full rounded-lg border border-edge bg-panel px-3 py-2 text-sm text-ink shadow-sm
+      focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500
+      disabled:bg-panel2 disabled:text-ink2;
+  }
+  .label {
+    @apply mb-1 block text-xs font-semibold uppercase tracking-wide text-ink2;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold
+      transition disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn bg-brand-600 text-white hover:bg-brand-700;
+  }
+  .btn-secondary {
+    @apply btn border border-edge bg-panel text-ink hover:bg-panel2;
+  }
+  .btn-danger {
+    @apply btn bg-rose-600 text-white hover:bg-rose-700;
+  }
+  .card {
+    @apply rounded-xl border border-edge bg-panel shadow-sm;
+  }
+  .input-tight {
+    @apply w-full min-w-[68px] rounded-md border border-edge bg-panel px-2 py-1 text-sm text-ink
+      focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500
+      disabled:bg-panel2 disabled:text-ink2;
+  }
+}

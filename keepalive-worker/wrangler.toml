@@ -1,0 +1,12 @@
+name = "cargo-admin-keepalive"
+main = "src/index.js"
+compatibility_date = "2024-09-01"
+
+# Fires every 13 minutes — safely under Render's 15-minute idle timeout.
+[triggers]
+crons = ["*/13 * * * *"]
+
+[vars]
+# The API health endpoint to ping. Override with:
+#   wrangler deploy --var HEALTH_URL:https://your-api.onrender.com/api/health
+HEALTH_URL = "https://cargo-admin-api.onrender.com/api/health"

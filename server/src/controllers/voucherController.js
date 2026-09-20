@@ -1,0 +1,167 @@
+import { z } from 'zod';
+import { prisma } from '../lib/prisma.js';
+import { asyncHandler, ApiError } from '../lib/asyncHandler.js';
+import { parsePagination, paginated } from '../utils/pagination.js';
+import { randomVoucherNo } from '../utils/voucherNo.js';
+
+// Blank strings from the form become null.
+const optionalText = z
+  .string()
+  .trim()
+  .optional()
+  .nullable()
+  .transform((v) => v || null);
+
+const itemSchema = z.object({
+  productName: z.string().min(1),
+  color: optionalText,
+  size: optionalText,
+  quantity: z.number().int().positive(),
+  unitPrice: z.number().nonnegative(),
+});
+
+const voucherSchema = z.object({
+  orderId: z.number().int().positive().nullable().optional(),
+  customerName: z.string().min(1),
+  voucherDate: z.string().optional(),
+  discountAmount: z.number().nonnegative().optional(),
+  items: z.array(itemSchema).min(1),
+});
+
+async function assertOrderExists(orderId) {
+  if (orderId == null) return;
+  const order = await prisma.order.findUnique({ where: { orderId }, select: { orderId: true } });
+  if (!order) throw new ApiError(400, `Order #${orderId} does not exist`);
+}
+
+const round2 = (n) => Number(n.toFixed(2));
+
+// Server is the source of truth for the arithmetic.
+function computeTotals(items, discountAmount = 0) {
+  const lines = items.map((i) => ({
+    productName: i.productName,
+    color: i.color ?? null,
+    size: i.size ?? null,
+    quantity: i.quantity,
+    unitPrice: i.unitPrice,
+    amount: round2(i.quantity * i.unitPrice),
+  }));
+  const subtotal = round2(lines.reduce((s, l) => s + l.amount, 0));
+  if (discountAmount > subtotal) {
+    throw new ApiError(400, 'Discount cannot be greater than the subtotal');
+  }
+  return { lines, subtotal, discountAmount, totalAmount: round2(subtotal - discountAmount) };
+}
+
+const serialize = (v) => ({
+  ...v,
+  subtotal: Number(v.subtotal),
+  discountAmount: Number(v.discountAmount),
+  totalAmount: Number(v.totalAmount),
+  items: v.items?.map((i) => ({ ...i, unitPrice: Number(i.unitPrice), amount: Number(i.amount) })),
+});
+
+export const listVouchers = asyncHandler(async (req, res) => {
+  const { page, pageSize, skip, take } = parsePagination(req.query);
+  const where = {};
+  if (req.query.orderId) where.orderId = Number(req.query.orderId);
+  if (req.query.search) {
+    const s = String(req.query.search).trim();
+    where.OR = [
+      { voucherNo: { contains: s, mode: 'insensitive' } },
+      { customerName: { contains: s, mode: 'insensitive' } },
+    ];
+  }
+  const [rows, total] = await Promise.all([
+    prisma.voucher.findMany({
+      where,
+      skip,
+      take,
+      orderBy: [{ voucherDate: 'desc' }, { voucherId: 'desc' }],
+      include: { _count: { select: { items: true } }, order: { select: { orderId: true } } },
+    }),
+    prisma.voucher.count({ where }),
+  ]);
+  res.json(
+    paginated(
+      rows.map(({ _count, ...v }) => ({ ...serialize(v), itemCount: _count.items })),
+      total,
+      page,
+      pageSize,
+    ),
+  );
+});
+
+export const getVoucher = asyncHandler(async (req, res) => {
+  const voucher = await prisma.voucher.findUnique({
+    where: { voucherId: Number(req.params.id) },
+    include: {
+      items: { orderBy: { voucherItemId: 'asc' } },
+      order: { select: { orderId: true, customerName: true } },
+    },
+  });
+  if (!voucher) throw new ApiError(404, 'Voucher not found');
+  res.json(serialize(voucher));
+});
+
+export const createVoucher = asyncHandler(async (req, res) => {
+  const body = voucherSchema.parse(req.body);
+  const { lines, subtotal, discountAmount, totalAmount } = computeTotals(body.items, body.discountAmount ?? 0);
+  await assertOrderExists(body.orderId);
+
+  // voucher_no is random and unique; on the (very unlikely) clash, pick another.
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      const voucher = await prisma.voucher.create({
+        data: {
+          voucherNo: randomVoucherNo(),
+          orderId: body.orderId ?? null,
+          customerName: body.customerName,
+          voucherDate: body.voucherDate ? new Date(body.voucherDate) : new Date(),
+          subtotal,
+          discountAmount,
+          totalAmount,
+          createdBy: req.user.username,
+          items: { create: lines },
+        },
+        include: { items: { orderBy: { voucherItemId: 'asc' } } },
+      });
+      return res.status(201).json(serialize(voucher));
+    } catch (e) {
+      if (e.code !== 'P2002' || attempt === 4) throw e;
+    }
+  }
+});
+
+export const updateVoucher = asyncHandler(async (req, res) => {
+  const voucherId = Number(req.params.id);
+  const body = voucherSchema.parse(req.body);
+  await prisma.voucher.findUniqueOrThrow({ where: { voucherId } });
+  await assertOrderExists(body.orderId);
+  const { lines, subtotal, discountAmount, totalAmount } = computeTotals(body.items, body.discountAmount ?? 0);
+
+  const voucher = await prisma.$transaction(async (tx) => {
+    await tx.voucherItem.deleteMany({ where: { voucherId } });
+    return tx.voucher.update({
+      where: { voucherId },
+      data: {
+        // null clears the link; leaving orderId out keeps the current one.
+        ...(body.orderId !== undefined ? { orderId: body.orderId } : {}),
+        customerName: body.customerName,
+        ...(body.voucherDate ? { voucherDate: new Date(body.voucherDate) } : {}),
+        subtotal,
+        discountAmount,
+        totalAmount,
+        items: { create: lines },
+      },
+      include: { items: { orderBy: { voucherItemId: 'asc' } } },
+    });
+  });
+  res.json(serialize(voucher));
+});
+
+export const deleteVoucher = asyncHandler(async (req, res) => {
+  const voucherId = Number(req.params.id);
+  await prisma.voucher.delete({ where: { voucherId } });
+  res.json({ id: voucherId, deleted: true });
+});

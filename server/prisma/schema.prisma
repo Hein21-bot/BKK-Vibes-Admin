@@ -1,0 +1,214 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Enums ----------
+
+enum UserRole {
+  admin
+  staff
+}
+
+// Order lifecycle:
+//   awaiting_payment -> confirmed (payment confirmed, product NOT bought yet) ->
+//   pending (product bought and in our hands in Bangkok) -> in_cargo -> arrived (Mandalay) ->
+//   delivering -> delivered.
+enum OrderStatus {
+  awaiting_payment
+  confirmed
+  pending
+  in_cargo
+  arrived
+  delivering
+  delivered
+}
+
+// Cargo batch lifecycle: Bangkok -> Mandalay.
+enum CargoStatus {
+  pending
+  in_transit
+  arrived
+  completed
+}
+
+enum ProductStatus {
+  active
+  inactive
+}
+
+// Business expense categories (transportation fee, cargo fee, …).
+enum ExpenseCategory {
+  transportation
+  cargo
+  packaging
+  supplies
+  salary
+  rent
+  utilities
+  other
+}
+
+// ---------- Models ----------
+
+model User {
+  userId          Int       @id @default(autoincrement()) @map("user_id")
+  username        String    @unique
+  passwordHash    String    @map("password_hash")
+  role            UserRole  @default(staff)
+  createdDatetime DateTime  @default(now()) @map("created_datetime")
+  lastLogin       DateTime? @map("last_login")
+
+  @@map("users")
+}
+
+model CargoBatch {
+  cargoId         Int         @id @default(autoincrement()) @map("cargo_id")
+  cargoBatchCode  String      @unique @map("cargo_batch_code")
+  origin          String      @default("Bangkok")
+  destination     String      @default("Mandalay")
+  weight          Decimal     @default(0) @db.Decimal(12, 2)
+  cargoRate       Decimal     @default(0) @map("cargo_rate") @db.Decimal(12, 2)
+  totalPrice      Decimal     @default(0) @map("total_price") @db.Decimal(12, 2)
+  status          CargoStatus @default(pending)
+  note            String?
+  departureDate   DateTime?   @map("departure_date")
+  arrivalDate     DateTime?   @map("arrival_date")
+  createdDatetime DateTime    @default(now()) @map("created_datetime")
+  updatedDatetime DateTime    @updatedAt @map("updated_datetime")
+  createdBy       String?     @map("created_by")
+
+  orders          Order[]
+
+  @@index([status])
+  @@map("cargo_batches")
+}
+
+model Order {
+  orderId         Int         @id @default(autoincrement()) @map("order_id")
+  customerName    String      @map("customer_name")
+  customerPhone   String?     @map("customer_phone")
+  customerAddress String?     @map("customer_address")
+  status          OrderStatus @default(awaiting_payment)
+  paid            Boolean     @default(false)
+  totalAmount     Decimal     @default(0) @map("total_amount") @db.Decimal(12, 2)
+  trackingNumber  String?     @map("tracking_number")
+  note            String?
+  cargoBatchId    Int?        @map("cargo_batch_id")
+  createdBy       String?     @map("created_by")
+  createdDatetime DateTime    @default(now()) @map("created_datetime")
+  updatedDatetime DateTime    @updatedAt @map("updated_datetime")
+
+  cargoBatch      CargoBatch? @relation(fields: [cargoBatchId], references: [cargoId], onDelete: SetNull)
+  items           OrderItem[]
+  vouchers        Voucher[]
+
+  @@index([status])
+  @@index([cargoBatchId])
+  @@index([createdDatetime])
+  @@map("orders")
+}
+
+model OrderItem {
+  orderItemId Int     @id @default(autoincrement()) @map("order_item_id")
+  orderId     Int     @map("order_id")
+  productName String  @map("product_name")
+  color       String?
+  size        String?
+  quantity    Int     @default(1)
+  unitPrice   Decimal @default(0) @map("unit_price") @db.Decimal(12, 2)
+  subtotal    Decimal @default(0) @db.Decimal(12, 2)
+
+  order       Order   @relation(fields: [orderId], references: [orderId], onDelete: Cascade)
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+// Customer-facing shopping voucher (printable receipt). Terms & conditions
+// are fixed text rendered by the client, not stored per voucher.
+model Voucher {
+  voucherId       Int           @id @default(autoincrement()) @map("voucher_id")
+  voucherNo       String        @unique @map("voucher_no")
+  customerName    String        @map("customer_name")
+  voucherDate     DateTime      @default(now()) @map("voucher_date")
+  orderId         Int?          @map("order_id")
+  subtotal        Decimal       @default(0) @db.Decimal(12, 2)
+  discountAmount  Decimal       @default(0) @map("discount_amount") @db.Decimal(12, 2)
+  totalAmount     Decimal       @default(0) @map("total_amount") @db.Decimal(12, 2)
+  createdBy       String?       @map("created_by")
+  createdDatetime DateTime      @default(now()) @map("created_datetime")
+
+  order           Order?        @relation(fields: [orderId], references: [orderId], onDelete: SetNull)
+  items           VoucherItem[]
+
+  @@index([voucherDate])
+  @@index([orderId])
+  @@map("vouchers")
+}
+
+model VoucherItem {
+  voucherItemId Int     @id @default(autoincrement()) @map("voucher_item_id")
+  voucherId     Int     @map("voucher_id")
+  productName   String  @map("product_name")
+  color         String?
+  size          String?
+  quantity      Int     @default(1)
+  unitPrice     Decimal @default(0) @map("unit_price") @db.Decimal(12, 2)
+  amount        Decimal @default(0) @db.Decimal(12, 2)
+
+  voucher       Voucher @relation(fields: [voucherId], references: [voucherId], onDelete: Cascade)
+
+  @@index([voucherId])
+  @@map("voucher_items")
+}
+
+model Expense {
+  expenseId       Int             @id @default(autoincrement()) @map("expense_id")
+  title           String
+  category        ExpenseCategory @default(other)
+  amount          Decimal         @default(0) @db.Decimal(12, 2)
+  expenseDate     DateTime        @default(now()) @map("expense_date")
+  paid            Boolean         @default(false)
+  note            String?
+  createdBy       String?         @map("created_by")
+  createdDatetime DateTime        @default(now()) @map("created_datetime")
+
+  @@index([category])
+  @@index([expenseDate])
+  @@map("expenses")
+}
+
+// Price Calculator data (assumptions, tiers, weight presets, market list and the
+// calculators' saved inputs). One row per key, the value is free-form JSON so the
+// calculator can add fields without a schema change.
+model PricingSetting {
+  key             String   @id
+  value           Json
+  updatedBy       String?  @map("updated_by")
+  updatedDatetime DateTime @updatedAt @map("updated_datetime")
+
+  @@map("pricing_settings")
+}
+
+// Product catalogue. Orders and vouchers keep their own free-text product names (no foreign
+// key), so deleting a product never changes an existing order or voucher.
+model Product {
+  productId       Int           @id @default(autoincrement()) @map("product_id")
+  name            String
+  category        String?
+  price           Decimal       @default(0) @db.Decimal(12, 2)
+  stockQty        Int           @default(0) @map("stock_qty")
+  // Resized image stored as a data URL: free hosts (Render) have no permanent disk for uploads.
+  imageUrl        String?       @map("image_url")
+  status          ProductStatus @default(active)
+  createdDatetime DateTime      @default(now()) @map("created_datetime")
+
+  @@index([status])
+  @@index([category])
+  @@map("products")
+}
