@@ -15,7 +15,8 @@
     "db:push": "prisma db push",
     "db:reset": "prisma db push --force-reset --accept-data-loss && node prisma/seed.js",
     "prisma:generate": "prisma generate",
-    "prisma:studio": "prisma studio"
+    "prisma:studio": "prisma studio",
+    "db:copy": "node scripts/copy-db.js"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

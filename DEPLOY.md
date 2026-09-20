@@ -12,6 +12,9 @@ Two ways. Both cost $0.
 
 > Free-tier limits change. Check Render's and Neon's pricing pages before relying on any number below.
 
+There is also **C — Supabase database + Render API** (below): a free Postgres that does not expire like Render's,
+which you can test from your own computer before deploying.
+
 **Recommendation:** try **A** first to see it working (5 minutes). If you will keep real data, move the database to Neon
 (**B**) before the 30 days are up — see [Keeping your data](#keeping-your-data).
 
@@ -76,6 +79,103 @@ additive), then starts the API. The first request after a quiet period takes ~30
 3. **Frontend on Cloudflare Pages instead of Render** (optional): dash.cloudflare.com → Workers & Pages → Create → Pages →
    Connect to Git → Root directory `client`, build command `npm install && npm run build`, output `dist`, and set
    `VITE_API_BASE_URL` to the Render API address. `client/public/_redirects` already handles page refreshes there.
+
+---
+
+## C. Supabase database (+ Render API)
+
+Use this to test against a free cloud database from your own computer first, then deploy the API to Render with the
+same database. Everything here was rehearsed locally (copy, numbering, lock-down); only the Supabase screens themselves
+could not be tried, so tell me if a step differs.
+
+### 1. Get the connection string (use the *Session pooler*)
+Supabase dashboard → the green **Connect** button (top) → **Session pooler** → copy the URI:
+
+```
+postgresql://postgres.<project-ref>:[YOUR-PASSWORD]@aws-0-<region>.pooler.supabase.com:5432/postgres
+```
+
+- Replace `[YOUR-PASSWORD]` with your **database password** (forgotten? Project Settings → Database → Reset password).
+  Use letters and numbers only, or URL-encode symbols (`@`→`%40`, `#`→`%23`, `/`→`%2F`, `:`→`%3A`, `?`→`%3F`).
+- Add `?sslmode=require&connection_limit=5` at the end.
+- **Why the Session pooler:** the *Direct connection* is IPv6-only on the free plan, which many home networks and hosts do
+  not have. The Session pooler works everywhere and supports everything the app needs, including creating tables. Do not
+  use the *Transaction pooler* (port 6543) for this app.
+
+> Supabase's Connect dialog also shows a two-line Prisma template (`DATABASE_URL` on port 6543 with `?pgbouncer=true`, plus
+> `DIRECT_URL`). You do **not** need it: this app uses one variable, `DATABASE_URL`, set to the port-5432 Session pooler string.
+> In Render's Environment page paste the value **without quotes** and do not set `PORT` (Render provides it).
+
+Below, `<SUPABASE_URL>` means that finished string.
+
+### 2. Create the tables
+```bash
+cd server
+DATABASE_URL="<SUPABASE_URL>" npx prisma db push
+```
+The Supabase **Table Editor** now shows 9 tables (empty).
+
+### 3. Upload your data from your computer
+```bash
+cd server
+SOURCE_DATABASE_URL="postgresql://heinminhtet@localhost:5432/cargo_admin?schema=public" \
+TARGET_DATABASE_URL="<SUPABASE_URL>" \
+npm run db:copy
+```
+(The first address is your local database — the one in `server/.env` today.) It prints a table of row counts for both sides
+and says **"Done. The counts match."**
+
+What the script guarantees:
+- Your local database is only **read**, never changed.
+- It is **all-or-nothing** (one transaction): if anything fails, the target stays as it was.
+- IDs are kept and the counters continue after the highest one, so new orders/vouchers do not clash.
+- It stops if the target already has data — add `--replace` to empty the copied tables **on the target** first.
+- **Logins are not copied.** The local demo passwords (`admin123`) must not end up on a public database. Instead the app
+  creates the two logins from `SEED_ADMIN_PASSWORD` / `SEED_STAFF_PASSWORD` (step 5).
+
+### 4. Lock the tables (recommended)
+Supabase publishes every table in the `public` schema as a web API. The app doesn't use that, so switch it off:
+Supabase → **SQL Editor** → New query → paste the contents of [`server/scripts/enable-rls.sql`](server/scripts/enable-rls.sql)
+→ **Run**. The result should list every table with `rls_enabled = true`. (Tested: an outsider role could read the tables
+before, read nothing after, and the app kept working.)
+
+### 5. Run your local app against Supabase
+Edit `server/.env`:
+```
+DATABASE_URL="<SUPABASE_URL>"
+SEED_ADMIN_PASSWORD="choose-a-strong-password"
+SEED_STAFF_PASSWORD="choose-another-strong-password"
+```
+(Keep your old local line as a comment so you can switch back.) Then `npm run dev` and log in as `admin` with
+`SEED_ADMIN_PASSWORD`. Check your orders, vouchers, products and Price Calculator settings are all there.
+
+### 6. Deploy the API to Render
+Render → **New +** → **Web Service** → your GitHub repo, then:
+
+| Field | Value |
+|---|---|
+| Root Directory | `server` |
+| Build Command | `npm install && npm run render-build` |
+| Start Command | `npm start` |
+| Instance Type | Free |
+| Health Check Path | `/api/health` |
+
+Environment variables: `DATABASE_URL` = `<SUPABASE_URL>`, `NODE_ENV` = `production`, `NODE_VERSION` = `20`,
+`JWT_SECRET` = any long random text, `SEED_ADMIN_PASSWORD` and `SEED_STAFF_PASSWORD` = the same values as in step 5.
+(The accounts already exist from your local test, so those two only matter if the accounts are ever missing.)
+Then deploy the frontend as in **A** (Render static site) or **B** (Cloudflare Pages), with `VITE_API_BASE_URL` set to the
+Render API address. If you use the blueprint (`render.yaml`) instead, delete its `databases:` block and make `DATABASE_URL`
+a `sync: false` value.
+
+### Supabase free-plan notes (check Supabase's pricing page — limits change)
+- **Projects pause after about a week without activity.** Keep the API pinged (see *Keeping the app awake*): every ping runs
+  a small database query. If it does pause, press **Restore** in the dashboard.
+- **No automatic backups on the free plan.** The same script makes a backup — copy from Supabase back to a local database
+  (which must already have the tables, `npx prisma db push`):
+  ```bash
+  SOURCE_DATABASE_URL="<SUPABASE_URL>" TARGET_DATABASE_URL="postgresql://…local…" npm run db:copy -- --replace --with-users
+  ```
+- About 500 MB of storage. Product photos (~40 KB each) are stored in the database, so they count toward it.
 
 ---
 

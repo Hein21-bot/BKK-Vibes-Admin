@@ -9,4 +9,4 @@ crons = ["*/13 * * * *"]
 [vars]
 # The API health endpoint to ping. Override with:
 #   wrangler deploy --var HEALTH_URL:https://your-api.onrender.com/api/health
-HEALTH_URL = "https://cargo-admin-api.onrender.com/api/health"
+HEALTH_URL = "https://bkk-vibes-admin.onrender.com/api/health"
