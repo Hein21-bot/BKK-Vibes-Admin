@@ -78,6 +78,10 @@ model CargoBatch {
   note            String?
   departureDate   DateTime?   @map("departure_date")
   arrivalDate     DateTime?   @map("arrival_date")
+  // Batch profit: one total for what the products cost in Bangkok (THB) and the MMK-per-THB rate
+  // actually paid. An empty rate means "use the Price Calculator's rate".
+  productCostThb  Decimal     @default(0) @map("product_cost_thb") @db.Decimal(14, 2)
+  fxRate          Decimal?    @map("fx_rate") @db.Decimal(12, 4)
   createdDatetime DateTime    @default(now()) @map("created_datetime")
   updatedDatetime DateTime    @updatedAt @map("updated_datetime")
   createdBy       String?     @map("created_by")

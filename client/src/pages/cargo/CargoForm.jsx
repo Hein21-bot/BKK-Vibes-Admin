@@ -5,7 +5,7 @@ import { TextInput, SelectInput, TextArea } from '../../components/ui/Field.jsx'
 import { useToast } from '../../components/ui/Toast.jsx';
 import { useI18n } from '../../i18n/I18nContext.jsx';
 import { CARGO_STATUSES } from '../../lib/constants.js';
-import { money } from '../../lib/format.js';
+import { baht } from '../../lib/format.js';
 
 const toLocalInput = (d) => (d ? new Date(d).toISOString().slice(0, 16) : '');
 
@@ -118,7 +118,7 @@ export function CargoForm({ open, onClose, batch, onSaved }) {
           onChange={(e) => setForm({ ...form, cargoRate: e.target.value })}
         />
         <div className="flex items-end text-sm text-ink2 sm:col-span-2">
-          {estTotal != null && <span>{t('cargoForm.totalCost', { v: money(estTotal) })}</span>}
+          {estTotal != null && <span>{t('cargoForm.totalCost', { v: baht(estTotal) })}</span>}
         </div>
         <TextInput
           label={t('cargoForm.departure')}

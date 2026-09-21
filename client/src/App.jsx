@@ -14,6 +14,8 @@ import ExpensesList from './pages/expenses/ExpensesList.jsx';
 import VouchersList from './pages/vouchers/VouchersList.jsx';
 import VoucherView from './pages/vouchers/VoucherView.jsx';
 import PricingPage from './pages/pricing/PricingPage.jsx';
+import BatchProfit from './pages/cargo/BatchProfit.jsx';
+import ExchangePage from './pages/exchange/ExchangePage.jsx';
 
 export default function App() {
   useKeepAlive();
@@ -32,12 +34,14 @@ export default function App() {
         <Route path="orders/:id" element={<OrderDetail />} />
         <Route path="to-buy" element={<ToBuy />} />
         <Route path="cargo" element={<CargoList />} />
+        <Route path="batch-profit" element={<BatchProfit />} />
         <Route path="cargo/:id" element={<CargoDetail />} />
         <Route path="products" element={<ProductsList />} />
         <Route path="expenses" element={<ExpensesList />} />
         <Route path="vouchers" element={<VouchersList />} />
         <Route path="vouchers/:id" element={<VoucherView />} />
         <Route path="pricing" element={<PricingPage />} />
+        <Route path="exchange" element={<ExchangePage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

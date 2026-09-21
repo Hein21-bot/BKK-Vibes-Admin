@@ -4,7 +4,7 @@ import { api, apiErrorMessage } from '../../api/client.js';
 // Price Calculator data lives in the database (table pricing_settings, one row per key).
 // Only these keys are synced. `activeTab` and `settingsLocked` stay per-browser (see
 // hooks/usePersistentState.js) because they are view preferences, not data.
-export const PRICING_KEYS = ['assumptions', 'tiers', 'weightPresets', 'marketRef', 'priceCalc', 'batchRows'];
+export const PRICING_KEYS = ['assumptions', 'tiers', 'weightPresets', 'marketRef', 'priceCalc', 'batchRows', 'exchange'];
 
 const LEGACY_PREFIX = 'cargo-admin:pricing:';
 const SAVE_DELAY_MS = 600;

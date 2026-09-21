@@ -11,7 +11,7 @@ import { Spinner } from '../../components/ui/Spinner.jsx';
 import { SelectInput } from '../../components/ui/Field.jsx';
 import { CargoForm } from './CargoForm.jsx';
 import { CARGO_STATUSES } from '../../lib/constants.js';
-import { money, dateOnly } from '../../lib/format.js';
+import { baht, dateOnly } from '../../lib/format.js';
 
 export default function CargoList() {
   const toast = useToast();
@@ -123,8 +123,8 @@ export default function CargoList() {
                     {c.origin} → {c.destination}
                   </Td>
                   <Td>{c.weight} kg</Td>
-                  <Td>{money(c.cargoRate)}</Td>
-                  <Td className="font-medium">{money(c.totalPrice)}</Td>
+                  <Td>{baht(c.cargoRate)}</Td>
+                  <Td className="font-medium">{baht(c.totalPrice)}</Td>
                   <Td>{c.orderCount}</Td>
                   <Td className="whitespace-nowrap text-ink2">{dateOnly(c.departureDate)}</Td>
                   <Td className="whitespace-nowrap text-ink2">{dateOnly(c.arrivalDate)}</Td>

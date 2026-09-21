@@ -3,6 +3,10 @@ const number = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
 // Amounts are in Myanmar Kyat.
 export const money = (n) => `${number.format(Math.round(Number(n || 0)))} Ks`;
 
+// Cargo fees and product costs paid in Bangkok are in Thai baht.
+const baht2 = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 });
+export const baht = (n) => `${baht2.format(Number(n || 0))} THB`;
+
 export const dateTime = (d) =>
   d ? new Date(d).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
 

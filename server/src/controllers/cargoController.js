@@ -35,6 +35,8 @@ const serialize = (c) => ({
   weight: num(c.weight),
   cargoRate: num(c.cargoRate),
   totalPrice: num(c.totalPrice),
+  productCostThb: num(c.productCostThb),
+  fxRate: c.fxRate == null ? null : num(c.fxRate),
 });
 
 export const listCargo = asyncHandler(async (req, res) => {
@@ -194,8 +196,8 @@ export const exportCargo = asyncHandler(async (req, res) => {
       { key: 'origin', header: 'Origin' },
       { key: 'destination', header: 'Destination' },
       { key: 'weight', header: 'Weight (kg)' },
-      { key: 'cargoRate', header: 'Rate' },
-      { key: 'totalPrice', header: 'Total Price' },
+      { key: 'cargoRate', header: 'Rate (THB per kg)' },
+      { key: 'totalPrice', header: 'Total Price (THB)' },
       { key: 'orderCount', header: 'Orders' },
       { key: 'departureDate', header: 'Departure' },
       { key: 'arrivalDate', header: 'Arrival' },

@@ -7,10 +7,12 @@ const NAV = [
   { to: '/orders', key: 'nav.orders', icon: '🧾' },
   { to: '/to-buy', key: 'nav.toBuy', icon: '🛒' },
   { to: '/cargo', key: 'nav.cargo', icon: '📦' },
+  { to: '/batch-profit', key: 'nav.profit', icon: '📈' },
   { to: '/products', key: 'nav.products', icon: '🛍️' },
   { to: '/vouchers', key: 'nav.vouchers', icon: '🎫' },
   { to: '/expenses', key: 'nav.expenses', icon: '💸' },
   { to: '/pricing', key: 'nav.pricing', icon: '🧮' },
+  { to: '/exchange', key: 'nav.exchange', icon: '💱' },
 ];
 
 export function Sidebar({ open, onClose }) {

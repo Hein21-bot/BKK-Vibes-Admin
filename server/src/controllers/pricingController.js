@@ -10,6 +10,7 @@ const SHAPES = {
   weightPresets: 'array',
   marketRef: 'array',
   batchRows: 'array',
+  exchange: 'object', // THB <-> MMK converter rates
 };
 
 const bodySchema = z.object({ value: z.any() });

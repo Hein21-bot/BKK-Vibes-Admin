@@ -12,7 +12,7 @@ import { Modal } from '../../components/ui/Modal.jsx';
 import { SelectInput } from '../../components/ui/Field.jsx';
 import { CargoForm } from './CargoForm.jsx';
 import { ORDER_STATUSES } from '../../lib/constants.js';
-import { money, dateTime } from '../../lib/format.js';
+import { money, baht, dateTime } from '../../lib/format.js';
 
 export default function CargoDetail() {
   const { id } = useParams();
@@ -91,8 +91,8 @@ export default function CargoDetail() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Info label={t('col.status')} value={<StatusBadge value={batch.status} kind="cargo" />} />
         <Info label={t('cargoDetail.weight')} value={`${batch.weight} kg`} />
-        <Info label={t('cargoDetail.rate')} value={money(batch.cargoRate)} />
-        <Info label={t('cargoDetail.totalCost')} value={money(batch.totalPrice)} />
+        <Info label={t('cargoDetail.rate')} value={baht(batch.cargoRate)} />
+        <Info label={t('cargoDetail.totalCost')} value={baht(batch.totalPrice)} />
         <Info label={t('cargoDetail.ordersInBatch')} value={orders.length} />
         <Info label={t('cargoDetail.departure')} value={dateTime(batch.departureDate)} />
         <Info label={t('cargoDetail.arrival')} value={dateTime(batch.arrivalDate)} />

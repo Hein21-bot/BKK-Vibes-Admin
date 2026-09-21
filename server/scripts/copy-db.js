@@ -40,9 +40,10 @@ const TABLES = [
   { model: 'cargoBatch', table: 'cargo_batches', id: 'cargo_id' },
   { model: 'product', table: 'products', id: 'product_id' },
   { model: 'order', table: 'orders', id: 'order_id' },
-  { model: 'orderItem', table: 'order_items', id: 'order_item_id' },
   { model: 'voucher', table: 'vouchers', id: 'voucher_id' },
   { model: 'voucherItem', table: 'voucher_items', id: 'voucher_item_id' },
+  // after vouchers: order lines can point at the voucher they came from (order_items.voucher_id)
+  { model: 'orderItem', table: 'order_items', id: 'order_item_id' },
   { model: 'expense', table: 'expenses', id: 'expense_id' },
   { model: 'pricingSetting', table: 'pricing_settings', id: null },
 ].filter((t) => withUsers || !t.users);
