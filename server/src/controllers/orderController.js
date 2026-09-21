@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { asyncHandler, ApiError } from '../lib/asyncHandler.js';
 import { parsePagination, paginated } from '../utils/pagination.js';
-import { recalcOrderTotal } from '../utils/orderTotals.js';
+import { recalcOrderTotal, lineLabel } from '../utils/orderTotals.js';
 import { sendExport } from '../utils/export.js';
 
 // awaiting_payment -> confirmed: payment confirmed, product NOT bought yet.
@@ -21,18 +21,14 @@ const optionalText = z
   .nullable()
   .transform((v) => v || null);
 
-// "Denim Jacket" + colour "Black" + size "M" -> "Denim Jacket (Black, M)".
-const lineLabel = (name, color, size) => {
-  const extra = [color, size].filter(Boolean).join(', ');
-  return extra ? `${String(name).trim()} (${extra})` : String(name).trim();
-};
-
 const itemSchema = z.object({
   productName: z.string().min(1),
   color: optionalText,
   size: optionalText,
   quantity: z.number().int().positive(),
   unitPrice: z.number().nonnegative().default(0),
+  // Sent back unchanged when an order is edited, so lines that came from a voucher stay tied to it.
+  voucherId: z.number().int().positive().nullable().optional(),
 });
 
 const orderCreateSchema = z.object({
@@ -151,8 +147,9 @@ export const getOrder = asyncHandler(async (req, res) => {
   res.json(await fullOrder(Number(req.params.id)));
 });
 
-const buildItems = (items) =>
+const buildItems = (items, voucherIds = new Set()) =>
   items.map((i) => ({
+    voucherId: i.voucherId && voucherIds.has(i.voucherId) ? i.voucherId : null,
     productName: i.productName,
     color: i.color ?? null,
     size: i.size ?? null,
@@ -189,7 +186,8 @@ export const createOrder = asyncHandler(async (req, res) => {
         cargoBatchId: body.cargoBatchId ?? null,
         note: body.note ?? null,
         createdBy: req.user.username,
-        items: { create: buildItems(body.items) },
+        // Lines of an order made from a voucher stay tied to it, so editing the voucher later updates them.
+        items: { create: buildItems(body.items).map((i) => ({ ...i, voucherId: body.voucherId ?? null })) },
       },
     });
     if (body.voucherId) {
@@ -228,8 +226,11 @@ export const updateOrder = asyncHandler(async (req, res) => {
   await prisma.$transaction(async (tx) => {
     await tx.order.update({ where: { orderId }, data });
     if (body.items) {
+      // Only vouchers really linked to this order may keep their lines tied to them.
+      const linked = await tx.voucher.findMany({ where: { orderId }, select: { voucherId: true } });
+      const ids = new Set(linked.map((v) => v.voucherId));
       await tx.orderItem.deleteMany({ where: { orderId } });
-      await tx.orderItem.createMany({ data: buildItems(body.items).map((i) => ({ ...i, orderId })) });
+      await tx.orderItem.createMany({ data: buildItems(body.items, ids).map((i) => ({ ...i, orderId })) });
     }
   });
   await recalcOrderTotal(orderId);

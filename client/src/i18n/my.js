@@ -138,6 +138,7 @@ export const my = {
   'orderForm.total': 'စုစုပေါင်း − {v}',
   'orderForm.paymentReceived': 'ငွေ လက်ခံရရှိပြီး',
   'orderForm.note': 'မှတ်ချက်',
+  'orderForm.voucherLinesHint': 'ဘောက်ချာမှ ပါလာသော ပစ္စည်းများသည် ထိုဘောက်ချာကို သိမ်းသည့်အခါ အလိုအလျောက် ပြောင်းလဲပါမည်။ ဤနေရာတွင် ကိုယ်တိုင်ထည့်ထားသော ပစ္စည်းများကိုမူ မပြောင်းပါ။',
   'orderForm.errAddProduct': 'ပစ္စည်း အနည်းဆုံး တစ်ခု ထည့်ပါ',
   'orderForm.errCustomer': 'ဖောက်သည် အမည် ဖြည့်ရန် လိုအပ်သည်',
 
@@ -308,6 +309,7 @@ export const my = {
   'vouchers.view': 'ကြည့်မည်',
   'vouchers.confirmDelete': 'ဘောက်ချာ {no} ကို ဖျက်မလား?',
   'toast.voucherCreated': 'ဘောက်ချာ ဖန်တီးပြီး',
+  'toast.voucherSavedOrder': 'ဘောက်ချာ သိမ်းပြီး — အော်ဒါ #{id} ၏ ပစ္စည်းများ ပြင်ပြီး',
   'toast.voucherUpdated': 'ဘောက်ချာ ပြင်ဆင်ပြီး',
   'toast.voucherDeleted': 'ဘောက်ချာ ဖျက်ပြီး',
   'voucher.title': 'ဝယ်ယူမှု ဘောက်ချာ',

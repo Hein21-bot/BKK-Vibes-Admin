@@ -170,11 +170,14 @@ a `sync: false` value.
 ### Supabase free-plan notes (check Supabase's pricing page — limits change)
 - **Projects pause after about a week without activity.** Keep the API pinged (see *Keeping the app awake*): every ping runs
   a small database query. If it does pause, press **Restore** in the dashboard.
-- **No automatic backups on the free plan.** The same script makes a backup — copy from Supabase back to a local database
-  (which must already have the tables, `npx prisma db push`):
+- **No automatic backups on the free plan.** Make your own — once a month, and before big changes:
   ```bash
-  SOURCE_DATABASE_URL="<SUPABASE_URL>" TARGET_DATABASE_URL="postgresql://…local…" npm run db:copy -- --replace --with-users
+  cd server
+  npm run backup                                        # saves backups/backup-<date>.json (git-ignored; keep it private)
+  npm run backup:restore -- backups/backup-<date>.json  # loads it into the database in server/.env
   ```
+  `backup` only reads. `backup:restore` refuses a database that already has data unless you add `--replace`, and is
+  all-or-nothing. Copy the file somewhere safe (cloud drive) — it contains customer data.
 - About 500 MB of storage. Product photos (~40 KB each) are stored in the database, so they count toward it.
 
 ---

@@ -137,7 +137,13 @@ export function VoucherForm({ open, onClose, voucher, prefill, onSaved }) {
       const { data } = editing
         ? await api.put(`/vouchers/${voucher.voucherId}`, payload)
         : await api.post('/vouchers', payload);
-      toast.success(editing ? t('toast.voucherUpdated') : t('toast.voucherCreated'));
+      toast.success(
+        data.orderSynced
+          ? t('toast.voucherSavedOrder', { id: data.orderSynced })
+          : editing
+            ? t('toast.voucherUpdated')
+            : t('toast.voucherCreated'),
+      );
       onSaved?.(data, !editing);
       onClose();
     } catch (err) {

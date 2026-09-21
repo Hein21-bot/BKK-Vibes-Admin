@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma.js';
 import { asyncHandler, ApiError } from '../lib/asyncHandler.js';
 import { parsePagination, paginated } from '../utils/pagination.js';
 import { randomVoucherNo } from '../utils/voucherNo.js';
+import { syncVoucherToOrder, detachVoucherFromOrder } from '../utils/voucherSync.js';
 
 // Blank strings from the form become null.
 const optionalText = z
@@ -112,21 +113,28 @@ export const createVoucher = asyncHandler(async (req, res) => {
   // voucher_no is random and unique; on the (very unlikely) clash, pick another.
   for (let attempt = 0; attempt < 5; attempt++) {
     try {
-      const voucher = await prisma.voucher.create({
-        data: {
-          voucherNo: randomVoucherNo(),
-          orderId: body.orderId ?? null,
-          customerName: body.customerName,
-          voucherDate: body.voucherDate ? new Date(body.voucherDate) : new Date(),
-          subtotal,
-          discountAmount,
-          totalAmount,
-          createdBy: req.user.username,
-          items: { create: lines },
+      const voucher = await prisma.$transaction(
+        async (tx) => {
+          const created = await tx.voucher.create({
+            data: {
+              voucherNo: randomVoucherNo(),
+              orderId: body.orderId ?? null,
+              customerName: body.customerName,
+              voucherDate: body.voucherDate ? new Date(body.voucherDate) : new Date(),
+              subtotal,
+              discountAmount,
+              totalAmount,
+              createdBy: req.user.username,
+              items: { create: lines },
+            },
+            include: { items: { orderBy: { voucherItemId: 'asc' } } },
+          });
+          if (body.orderId) await syncVoucherToOrder(tx, created.voucherId, body.orderId, lines);
+          return created;
         },
-        include: { items: { orderBy: { voucherItemId: 'asc' } } },
-      });
-      return res.status(201).json(serialize(voucher));
+        { timeout: 20_000 },
+      );
+      return res.status(201).json({ ...serialize(voucher), orderSynced: body.orderId ?? null });
     } catch (e) {
       if (e.code !== 'P2002' || attempt === 4) throw e;
     }
@@ -136,13 +144,15 @@ export const createVoucher = asyncHandler(async (req, res) => {
 export const updateVoucher = asyncHandler(async (req, res) => {
   const voucherId = Number(req.params.id);
   const body = voucherSchema.parse(req.body);
-  await prisma.voucher.findUniqueOrThrow({ where: { voucherId } });
+  const current = await prisma.voucher.findUniqueOrThrow({ where: { voucherId } });
   await assertOrderExists(body.orderId);
+  // undefined keeps the current link, null clears it.
+  const orderId = body.orderId !== undefined ? body.orderId : current.orderId;
   const { lines, subtotal, discountAmount, totalAmount } = computeTotals(body.items, body.discountAmount ?? 0);
 
   const voucher = await prisma.$transaction(async (tx) => {
     await tx.voucherItem.deleteMany({ where: { voucherId } });
-    return tx.voucher.update({
+    const updated = await tx.voucher.update({
       where: { voucherId },
       data: {
         // null clears the link; leaving orderId out keeps the current one.
@@ -156,8 +166,12 @@ export const updateVoucher = asyncHandler(async (req, res) => {
       },
       include: { items: { orderBy: { voucherItemId: 'asc' } } },
     });
-  });
-  res.json(serialize(voucher));
+    // Keep the order's product lines in step with this voucher.
+    if (current.orderId && current.orderId !== orderId) await detachVoucherFromOrder(tx, voucherId, current.orderId);
+    if (orderId) await syncVoucherToOrder(tx, voucherId, orderId, lines);
+    return updated;
+  }, { timeout: 20_000 });
+  res.json({ ...serialize(voucher), orderSynced: orderId ?? null });
 });
 
 export const deleteVoucher = asyncHandler(async (req, res) => {

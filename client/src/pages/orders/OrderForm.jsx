@@ -42,6 +42,8 @@ export function OrderForm({ open, onClose, order, prefill, onSaved }) {
             size: i.size || '',
             quantity: i.quantity,
             unitPrice: i.unitPrice,
+            // Lines that came from a voucher stay tied to it (see the hint below the product list).
+            voucherId: order ? i.voucherId ?? null : null,
           }))
         : [blankItem()],
     });
@@ -77,6 +79,7 @@ export function OrderForm({ open, onClose, order, prefill, onSaved }) {
         size: it.size.trim(),
         quantity: Math.max(1, Math.floor(Number(it.quantity) || 1)),
         unitPrice: Number(it.unitPrice) || 0,
+        ...(editing ? { voucherId: it.voucherId ?? null } : {}),
       }))
       .filter((it) => it.productName);
     if (!items.length) return toast.error(t('orderForm.errAddProduct'));
@@ -160,6 +163,9 @@ export function OrderForm({ open, onClose, order, prefill, onSaved }) {
               {t('orderForm.addProduct')}
             </button>
           </div>
+          {form.items.some((it) => it.voucherId) && (
+            <p className="mb-2 text-xs text-ink2">{t('orderForm.voucherLinesHint')}</p>
+          )}
           <div className="space-y-2">
             {form.items.map((it, idx) => (
               <div key={idx} className="rounded-lg border border-edge bg-panel2 p-2.5">

@@ -138,6 +138,7 @@ export const en = {
   'orderForm.total': 'Total: {v}',
   'orderForm.paymentReceived': 'Payment received (paid)',
   'orderForm.note': 'Note',
+  'orderForm.voucherLinesHint': 'Lines that came from a voucher are updated automatically when that voucher is saved. Lines you add here by hand are never changed by it.',
   'orderForm.errAddProduct': 'Add at least one product',
   'orderForm.errCustomer': 'Customer name is required',
 
@@ -308,6 +309,7 @@ export const en = {
   'vouchers.view': 'View',
   'vouchers.confirmDelete': 'Delete voucher {no}?',
   'toast.voucherCreated': 'Voucher created',
+  'toast.voucherSavedOrder': 'Voucher saved — order #{id} products updated',
   'toast.voucherUpdated': 'Voucher updated',
   'toast.voucherDeleted': 'Voucher deleted',
   'voucher.title': 'Shopping Voucher',

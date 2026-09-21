@@ -5,3 +5,7 @@ build/
 *.local
 .DS_Store
 npm-debug.log*
+
+# database backups (customer data)
+backups/
+server/backups/

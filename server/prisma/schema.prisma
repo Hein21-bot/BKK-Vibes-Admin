@@ -122,10 +122,14 @@ model OrderItem {
   quantity    Int     @default(1)
   unitPrice   Decimal @default(0) @map("unit_price") @db.Decimal(12, 2)
   subtotal    Decimal @default(0) @db.Decimal(12, 2)
+  // Set when the line comes from a voucher: saving that voucher refreshes these lines.
+  voucherId   Int?    @map("voucher_id")
 
-  order       Order   @relation(fields: [orderId], references: [orderId], onDelete: Cascade)
+  order       Order    @relation(fields: [orderId], references: [orderId], onDelete: Cascade)
+  voucher     Voucher? @relation(fields: [voucherId], references: [voucherId], onDelete: SetNull)
 
   @@index([orderId])
+  @@index([voucherId])
   @@map("order_items")
 }
 
@@ -145,6 +149,7 @@ model Voucher {
 
   order           Order?        @relation(fields: [orderId], references: [orderId], onDelete: SetNull)
   items           VoucherItem[]
+  orderItems      OrderItem[]
 
   @@index([voucherDate])
   @@index([orderId])
