@@ -27,8 +27,9 @@ const voucherSchema = z.object({
   customerName: z.string().min(1),
   voucherDate: z.string().optional(),
   discountAmount: z.number().nonnegative().optional(),
-  // On create only: also make an order (awaiting payment) with the same customer and products, linked to this voucher.
-  createOrder: z.boolean().optional(),
+  // On create only (no linked order): true = the customer has paid, so also make a paid, confirmed order with the
+  // same customer and products, linked to this voucher. false / omitted = voucher only.
+  paid: z.boolean().optional(),
   items: z.array(itemSchema).min(1),
 });
 
@@ -136,12 +137,12 @@ export const createVoucher = asyncHandler(async (req, res) => {
             await syncVoucherToOrder(tx, created.voucherId, body.orderId, lines);
             return { voucher: created, orderId: body.orderId, orderCreated: false };
           }
-          if (body.createOrder) {
+          if (body.paid) {
             const order = await tx.order.create({
               data: {
                 customerName: body.customerName,
-                status: 'awaiting_payment',
-                paid: false,
+                status: 'confirmed', // paid, product not bought yet
+                paid: true,
                 createdBy: req.user.username,
                 items: {
                   create: lines.map((l) => ({

@@ -140,7 +140,7 @@ export default function OrdersList() {
         </label>
         <div className="flex items-end gap-2">
           <button type="submit" className="btn-primary">
-            {t('common.apply')}
+            {t('common.search')}
           </button>
           <button type="button" className="btn-secondary" onClick={reset}>
             {t('common.reset')}

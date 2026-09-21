@@ -44,6 +44,7 @@ export function VoucherForm({ open, onClose, voucher, prefill, onSaved }) {
     const src = voucher || prefill;
     setForm({
       orderId: src?.orderId ? String(src.orderId) : '',
+      paid: true, // new vouchers default to paid
       customerName: src?.customerName || '',
       voucherDate: (voucher?.voucherDate || new Date().toISOString()).slice(0, 10) || today(),
       discountAmount: voucher?.discountAmount || '',
@@ -131,8 +132,8 @@ export function VoucherForm({ open, onClose, voucher, prefill, onSaved }) {
       voucherDate: new Date(form.voucherDate).toISOString(),
       discountAmount: discount,
       items,
-      // A new voucher always makes its own new order (unless it was started from an existing order).
-      ...(!editing && !form.orderId ? { createOrder: true } : {}),
+      // A paid new voucher also makes its own (confirmed) order; an unpaid one is a voucher only.
+      ...(!editing && !form.orderId ? { paid: !!form.paid } : {}),
     };
     setSaving(true);
     try {
@@ -209,7 +210,17 @@ export function VoucherForm({ open, onClose, voucher, prefill, onSaved }) {
               )}
             </div>
           ) : (
-            <p className="text-xs text-ink2 sm:col-span-2">{t('voucher.autoOrderHint')}</p>
+            <div className="sm:col-span-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-ink">
+                <input
+                  type="checkbox"
+                  checked={!!form.paid}
+                  onChange={(e) => setForm({ ...form, paid: e.target.checked })}
+                />
+                {t('voucher.paid')}
+              </label>
+              <p className="mt-1 text-xs text-ink2">{form.paid ? t('voucher.paidHint') : t('voucher.unpaidHint')}</p>
+            </div>
           )}
         </div>
 

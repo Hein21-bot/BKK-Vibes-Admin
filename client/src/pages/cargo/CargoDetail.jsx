@@ -220,6 +220,7 @@ function AddOrdersModal({ open, onClose, cargoId, onDone }) {
   const { t } = useI18n();
   const [search, setSearch] = useState('');
   const [rows, setRows] = useState([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [picked, setPicked] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -227,8 +228,11 @@ function AddOrdersModal({ open, onClose, cargoId, onDone }) {
   const load = () => {
     setLoading(true);
     api
-      .get('/orders', { params: { unassigned: 'true', search, pageSize: 50 } })
-      .then((r) => setRows(r.data.data))
+      .get('/orders', { params: { unassigned: 'true', search, pageSize: 100 } })
+      .then((r) => {
+        setRows(r.data.data);
+        setTotal(r.data.pagination.total);
+      })
       .catch((e) => toast.error(apiErrorMessage(e)))
       .finally(() => setLoading(false));
   };
@@ -244,11 +248,14 @@ function AddOrdersModal({ open, onClose, cargoId, onDone }) {
 
   const toggle = (id) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
 
-  const submit = async () => {
-    if (!picked.length) return toast.error(t('cargoDetail.pickOrders'));
+  // Orders that are not yet "Pending (Bangkok)" are unpaid or not bought yet.
+  const notReady = rows.filter((o) => o.status !== 'pending').length;
+
+  const submit = async (ids = picked) => {
+    if (!ids.length) return toast.error(t('cargoDetail.pickOrders'));
     setSaving(true);
     try {
-      const { data } = await api.post(`/cargo/${cargoId}/orders`, { orderIds: picked });
+      const { data } = await api.post(`/cargo/${cargoId}/orders`, { orderIds: ids });
       toast.success(t('toast.addedN', { n: data.added }));
       onDone();
       onClose();
@@ -257,6 +264,13 @@ function AddOrdersModal({ open, onClose, cargoId, onDone }) {
     } finally {
       setSaving(false);
     }
+  };
+
+  const addAll = () => {
+    const msg =
+      t('cargoDetail.confirmAddAll', { n: rows.length }) +
+      (notReady ? ` ${t('cargoDetail.confirmAddAllWarn', { w: notReady })}` : '');
+    if (confirm(msg)) submit(rows.map((o) => o.orderId));
   };
 
   return (
@@ -270,7 +284,10 @@ function AddOrdersModal({ open, onClose, cargoId, onDone }) {
           <button className="btn-secondary" onClick={onClose}>
             {t('common.cancel')}
           </button>
-          <button className="btn-primary" onClick={submit} disabled={saving}>
+          <button className="btn-secondary" onClick={addAll} disabled={saving || loading || rows.length === 0}>
+            {t('cargoDetail.addAll', { n: rows.length })}
+          </button>
+          <button className="btn-primary" onClick={() => submit()} disabled={saving}>
             {saving ? t('common.saving') : t('cargoDetail.addNOrders', { n: picked.length || '' })}
           </button>
         </>
@@ -299,13 +316,14 @@ function AddOrdersModal({ open, onClose, cargoId, onDone }) {
               <Th className="w-10" />
               <Th>{t('col.order')}</Th>
               <Th>{t('col.customer')}</Th>
+              <Th>{t('col.status')}</Th>
               <Th>{t('col.units')}</Th>
               <Th>{t('col.total')}</Th>
             </tr>
           </THead>
           <TBody>
-            {loading && <EmptyRow colSpan={5}>{t('common.loading')}</EmptyRow>}
-            {!loading && rows.length === 0 && <EmptyRow colSpan={5}>{t('cargoDetail.noUnassigned')}</EmptyRow>}
+            {loading && <EmptyRow colSpan={6}>{t('common.loading')}</EmptyRow>}
+            {!loading && rows.length === 0 && <EmptyRow colSpan={6}>{t('cargoDetail.noUnassigned')}</EmptyRow>}
             {!loading &&
               rows.map((o) => (
                 <tr
@@ -321,6 +339,9 @@ function AddOrdersModal({ open, onClose, cargoId, onDone }) {
                     <div className="font-medium text-ink">{o.customerName}</div>
                     <div className="text-xs text-ink2">{o.customerPhone || '—'}</div>
                   </Td>
+                  <Td>
+                    <StatusBadge value={o.status} />
+                  </Td>
                   <Td>{o.itemCount}</Td>
                   <Td>{money(o.totalAmount)}</Td>
                 </tr>
@@ -328,6 +349,10 @@ function AddOrdersModal({ open, onClose, cargoId, onDone }) {
           </TBody>
         </Table>
       </div>
+      {total > rows.length && (
+        <p className="mt-2 text-xs text-ink2">{t('cargoDetail.showingOf', { n: rows.length, total })}</p>
+      )}
+      {notReady > 0 && <p className="mt-2 text-xs text-amber-600">⚠️ {t('cargoDetail.notReadyWarn', { n: notReady })}</p>}
     </Modal>
   );
 }

@@ -6,11 +6,6 @@ import { apiErrorMessage } from '../api/client.js';
 import { Spinner } from '../components/ui/Spinner.jsx';
 import { ControlToggles } from '../components/ControlToggles.jsx';
 
-const DEMO = [
-  ['admin', 'admin123', 'admin'],
-  ['staff', 'staff123', 'staff'],
-];
-
 export default function Login() {
   const { user, login } = useAuth();
   const { t } = useI18n();
@@ -74,25 +69,6 @@ export default function Login() {
               {loading && <Spinner className="h-4 w-4 text-white" />} {t('auth.signIn')}
             </button>
           </form>
-          <div className="mt-6 border-t border-edge pt-4">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink2">
-              {t('auth.demoAccounts')}
-            </p>
-            <div className="space-y-1">
-              {DEMO.map(([u, p, roleKey]) => (
-                <button
-                  key={u}
-                  onClick={() => setForm({ username: u, password: p })}
-                  className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-panel2"
-                >
-                  <span className="font-medium text-ink">{t(`role.${roleKey}`)}</span>
-                  <span className="text-ink2">
-                    {u} / {p}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
     </div>
