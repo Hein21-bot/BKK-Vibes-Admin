@@ -131,6 +131,8 @@ export function VoucherForm({ open, onClose, voucher, prefill, onSaved }) {
       voucherDate: new Date(form.voucherDate).toISOString(),
       discountAmount: discount,
       items,
+      // A new voucher always makes its own new order (unless it was started from an existing order).
+      ...(!editing && !form.orderId ? { createOrder: true } : {}),
     };
     setSaving(true);
     try {
@@ -138,7 +140,9 @@ export function VoucherForm({ open, onClose, voucher, prefill, onSaved }) {
         ? await api.put(`/vouchers/${voucher.voucherId}`, payload)
         : await api.post('/vouchers', payload);
       toast.success(
-        data.orderSynced
+        data.orderCreated
+          ? t('toast.voucherCreatedOrder', { id: data.orderSynced })
+          : data.orderSynced
           ? t('toast.voucherSavedOrder', { id: data.orderSynced })
           : editing
             ? t('toast.voucherUpdated')
@@ -185,24 +189,28 @@ export function VoucherForm({ open, onClose, voucher, prefill, onSaved }) {
             value={form.voucherDate}
             onChange={(e) => setForm({ ...form, voucherDate: e.target.value })}
           />
-          <div className="sm:col-span-2">
-            <SelectInput
-              label={t('voucher.linkedOrder')}
-              includeBlank={t('voucher.noOrder')}
-              value={form.orderId}
-              onChange={(e) => onPickOrder(e.target.value)}
-              options={orderOptions}
-            />
-            {form.orderId && (
-              <button
-                type="button"
-                className="mt-1 text-xs font-medium text-brand-600"
-                onClick={() => fillFromOrder(form.orderId)}
-              >
-                {t('voucher.fillFromOrder')}
-              </button>
-            )}
-          </div>
+          {editing || prefill?.orderId ? (
+            <div className="sm:col-span-2">
+              <SelectInput
+                label={t('voucher.linkedOrder')}
+                includeBlank={t('voucher.noOrder')}
+                value={form.orderId}
+                onChange={(e) => onPickOrder(e.target.value)}
+                options={orderOptions}
+              />
+              {form.orderId && (
+                <button
+                  type="button"
+                  className="mt-1 text-xs font-medium text-brand-600"
+                  onClick={() => fillFromOrder(form.orderId)}
+                >
+                  {t('voucher.fillFromOrder')}
+                </button>
+              )}
+            </div>
+          ) : (
+            <p className="text-xs text-ink2 sm:col-span-2">{t('voucher.autoOrderHint')}</p>
+          )}
         </div>
 
         <div>

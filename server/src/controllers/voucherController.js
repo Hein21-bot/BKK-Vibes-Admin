@@ -4,6 +4,7 @@ import { asyncHandler, ApiError } from '../lib/asyncHandler.js';
 import { parsePagination, paginated } from '../utils/pagination.js';
 import { randomVoucherNo } from '../utils/voucherNo.js';
 import { syncVoucherToOrder, detachVoucherFromOrder } from '../utils/voucherSync.js';
+import { recalcOrderTotal } from '../utils/orderTotals.js';
 
 // Blank strings from the form become null.
 const optionalText = z
@@ -26,6 +27,8 @@ const voucherSchema = z.object({
   customerName: z.string().min(1),
   voucherDate: z.string().optional(),
   discountAmount: z.number().nonnegative().optional(),
+  // On create only: also make an order (awaiting payment) with the same customer and products, linked to this voucher.
+  createOrder: z.boolean().optional(),
   items: z.array(itemSchema).min(1),
 });
 
@@ -113,7 +116,7 @@ export const createVoucher = asyncHandler(async (req, res) => {
   // voucher_no is random and unique; on the (very unlikely) clash, pick another.
   for (let attempt = 0; attempt < 5; attempt++) {
     try {
-      const voucher = await prisma.$transaction(
+      const made = await prisma.$transaction(
         async (tx) => {
           const created = await tx.voucher.create({
             data: {
@@ -129,12 +132,41 @@ export const createVoucher = asyncHandler(async (req, res) => {
             },
             include: { items: { orderBy: { voucherItemId: 'asc' } } },
           });
-          if (body.orderId) await syncVoucherToOrder(tx, created.voucherId, body.orderId, lines);
-          return created;
+          if (body.orderId) {
+            await syncVoucherToOrder(tx, created.voucherId, body.orderId, lines);
+            return { voucher: created, orderId: body.orderId, orderCreated: false };
+          }
+          if (body.createOrder) {
+            const order = await tx.order.create({
+              data: {
+                customerName: body.customerName,
+                status: 'awaiting_payment',
+                paid: false,
+                createdBy: req.user.username,
+                items: {
+                  create: lines.map((l) => ({
+                    voucherId: created.voucherId,
+                    productName: l.productName,
+                    color: l.color,
+                    size: l.size,
+                    quantity: l.quantity,
+                    unitPrice: l.unitPrice,
+                    subtotal: l.amount,
+                  })),
+                },
+              },
+            });
+            await tx.voucher.update({ where: { voucherId: created.voucherId }, data: { orderId: order.orderId } });
+            await recalcOrderTotal(order.orderId, tx);
+            return { voucher: { ...created, orderId: order.orderId }, orderId: order.orderId, orderCreated: true };
+          }
+          return { voucher: created, orderId: null, orderCreated: false };
         },
         { timeout: 20_000 },
       );
-      return res.status(201).json({ ...serialize(voucher), orderSynced: body.orderId ?? null });
+      return res
+        .status(201)
+        .json({ ...serialize(made.voucher), orderSynced: made.orderId, orderCreated: made.orderCreated });
     } catch (e) {
       if (e.code !== 'P2002' || attempt === 4) throw e;
     }
