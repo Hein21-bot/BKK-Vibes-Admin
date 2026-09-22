@@ -67,6 +67,9 @@ function PricingContent() {
   const [assumptions, setAssumptions] = usePricingState('assumptions', DEFAULT_ASSUMPTIONS);
   const [tiers, setTiers] = usePricingState('tiers', DEFAULT_TIERS);
   const [presets, setPresets] = usePricingState('weightPresets', DEFAULT_WEIGHT_PRESETS);
+  // Locked by default — these are sensitive pricing assumptions, editable from the Settings tab
+  // or, once unlocked, directly from the Price Calculator (both edit the same saved values).
+  const [locked, setLocked] = usePersistentState('settingsLocked', true);
 
   const shared = { assumptions, tiers, presets };
 
@@ -106,7 +109,7 @@ function PricingContent() {
         ))}
       </div>
 
-      {tab === 'price' && <PriceCalculator {...shared} />}
+      {tab === 'price' && <PriceCalculator {...shared} setAssumptions={setAssumptions} locked={locked} />}
       {tab === 'batch' && <BatchCalculator {...shared} />}
       {tab === 'weights' && (
         <WeightReference presets={presets} setPresets={setPresets} cargoRate={assumptions.cargoRate} />
@@ -118,6 +121,8 @@ function PricingContent() {
           setAssumptions={setAssumptions}
           tiers={tiers}
           setTiers={setTiers}
+          locked={locked}
+          setLocked={setLocked}
         />
       )}
 

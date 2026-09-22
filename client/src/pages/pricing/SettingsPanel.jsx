@@ -1,13 +1,12 @@
 import { DEFAULT_ASSUMPTIONS, DEFAULT_TIERS } from '../../lib/pricing/calc.js';
 import { fmtMMK } from '../../lib/pricing/format.js';
-import { usePersistentState } from '../../hooks/usePersistentState.js';
 import { useI18n } from '../../i18n/I18nContext.jsx';
 import { NumField, PctField, Section, IconButton } from './ui.jsx';
 
-export default function SettingsPanel({ assumptions, setAssumptions, tiers, setTiers }) {
+// `locked` / `setLocked` are lifted up to PricingPage so the Price Calculator tab can share the
+// same lock — unlocking here also unlocks the same assumption fields shown there.
+export default function SettingsPanel({ assumptions, setAssumptions, tiers, setTiers, locked, setLocked }) {
   const { t } = useI18n();
-  // Locked by default — this tab holds sensitive pricing assumptions.
-  const [locked, setLocked] = usePersistentState('settingsLocked', true);
   const ro = locked;
 
   const setA = (k, v) => setAssumptions((p) => ({ ...p, [k]: v }));

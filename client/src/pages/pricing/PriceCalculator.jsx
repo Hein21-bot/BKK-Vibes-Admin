@@ -3,16 +3,16 @@ import { computeItem, presetWeight } from '../../lib/pricing/calc.js';
 import { usePricingState } from '../../lib/pricing/pricingStore.jsx';
 import { useI18n } from '../../i18n/I18nContext.jsx';
 import { fmtMMK, fmtPct, fmtTHB } from '../../lib/pricing/format.js';
-import { NumField, Section, SelectField, StatRow, TextField } from './ui.jsx';
+import { NumField, PctField, Section, SelectField, StatRow, TextField } from './ui.jsx';
 
 const TIER_USE = { LOW: 'pricing.tier.lowUse', NORMAL: 'pricing.tier.normalUse', PREMIUM: 'pricing.tier.premiumUse' };
 
-export default function PriceCalculator({ assumptions, tiers, presets }) {
+export default function PriceCalculator({ assumptions, setAssumptions, tiers, presets, locked }) {
   const { t } = useI18n();
   const firstCat = presets[0]?.category ?? 'T-shirt';
   // Only the fields for this one test item are kept here. Cost assumptions (cargo rate, fx, risk, …)
-  // always come live from the Assumptions & Tiers tab below, so a change there is reflected here
-  // immediately — there is no separate copy of them to fall out of sync.
+  // are edited below directly on `assumptions` (the same values as the Assumptions & Tiers tab) —
+  // there is no separate copy of them here to fall out of sync.
   const initial = {
     product: 'Example: AIRism T-Shirt',
     category: firstCat,
@@ -24,6 +24,7 @@ export default function PriceCalculator({ assumptions, tiers, presets }) {
 
   const [s, setS] = usePricingState('priceCalc', initial);
   const set = (k, v) => setS((p) => ({ ...p, [k]: v }));
+  const setA = (k, v) => setAssumptions((p) => ({ ...p, [k]: v }));
 
   const effectiveWeight = s.weightAuto ? presetWeight(s.category, presets) : s.weightKg;
 
@@ -94,6 +95,23 @@ export default function PriceCalculator({ assumptions, tiers, presets }) {
             placeholder={t('pricing.f.marketPricePh')}
             onChange={(v) => set('marketPriceMMK', v)}
           />
+        </div>
+
+        <div className="mt-4 border-t border-edge pt-4">
+          <p className="mb-3 text-xs text-ink2">
+            {locked ? t('pricing.f.assumptionsLockedHint') : t('pricing.f.assumptionsHint')}
+          </p>
+          <fieldset disabled={locked} className="grid gap-3 sm:grid-cols-2">
+            <NumField label={t('pricing.f.cargoRate')} unit="THB/kg" value={assumptions.cargoRate} step={10} onChange={(v) => setA('cargoRate', v)} disabled={locked} />
+            <NumField label={t('pricing.f.fx')} unit="MMK/THB" value={assumptions.fx} step={1} onChange={(v) => setA('fx', v)} disabled={locked} />
+            <NumField label={t('pricing.f.thDelivery')} unit="THB" value={assumptions.thLocalDelivery} onChange={(v) => setA('thLocalDelivery', v)} disabled={locked} />
+            <NumField label={t('pricing.f.payFee')} unit="THB" value={assumptions.paymentFee} onChange={(v) => setA('paymentFee', v)} disabled={locked} />
+            <NumField label={t('pricing.f.packaging')} unit="MMK" value={assumptions.packaging} step={50} onChange={(v) => setA('packaging', v)} disabled={locked} />
+            <NumField label={t('pricing.f.otherCost')} unit="MMK" value={assumptions.otherCost} step={50} onChange={(v) => setA('otherCost', v)} disabled={locked} />
+            <PctField label={t('pricing.f.risk')} value={assumptions.riskPct} onChange={(v) => setA('riskPct', v)} disabled={locked} />
+            <NumField label={t('pricing.f.minProfit')} unit="MMK / item" value={assumptions.minProfit} step={500} onChange={(v) => setA('minProfit', v)} disabled={locked} />
+            <NumField label={t('pricing.f.rounding')} unit="MMK" value={assumptions.roundTo} step={100} onChange={(v) => setA('roundTo', v)} disabled={locked} />
+          </fieldset>
         </div>
       </Section>
 

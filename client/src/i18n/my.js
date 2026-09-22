@@ -437,6 +437,8 @@ export const my = {
   'pricing.saveError': 'သိမ်း၍မရပါ — ပြန်ကြိုးစားရန် နှိပ်ပါ',
   'pricing.loadError': 'တွက်စက် ဒေတာကို ဖတ်၍မရပါ',
   'pricing.retry': 'ပြန်ကြိုးစားမည်',
+  'pricing.f.assumptionsLockedHint': 'ဤနေရာမှ ပြင်ခြင်းသည် Assumptions & Tiers tab ကိုပါ ပြောင်းပါမည် (တန်ဖိုးတူညီသည်)။ ဤနေရာတွင်လည်း ပြင်လိုပါက Settings ထဲမှ Unlock လုပ်ပါ။',
+  'pricing.f.assumptionsHint': 'ကာဂိုနှုန်း၊ ငွေလဲနှုန်းနှင့် အောက်ပါ ကုန်ကျခန့်မှန်းချက်များသည် နေရာတိုင်းတွင် သုံးနေသော တန်ဖိုးများပင် ဖြစ်ပါသည် — ဤနေရာမှ ပြင်ပါက Assumptions & Tiers tab ကိုပါ တစ်ပြိုင်နက် ပြောင်းပါမည်။',
   'pricing.inputs': 'ထည့်သွင်းချက်များ',
   'pricing.calculation': 'တွက်ချက်မှု',
   'pricing.recommendedPrices': 'အကြံပြု ရောင်းဈေးများ',

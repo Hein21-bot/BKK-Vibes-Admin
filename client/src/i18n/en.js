@@ -437,6 +437,8 @@ export const en = {
   'pricing.saveError': 'Could not save — click to retry',
   'pricing.loadError': 'Could not load the calculator data',
   'pricing.retry': 'Try again',
+  'pricing.f.assumptionsLockedHint': 'These also change the Assumptions & Tiers tab (same values). Unlock in Settings to edit them here too.',
+  'pricing.f.assumptionsHint': 'Cargo rate, exchange rate and the other cost assumptions below are the same ones used everywhere — editing them here also updates the Assumptions & Tiers tab.',
   'pricing.inputs': 'Inputs',
   'pricing.calculation': 'Calculation',
   'pricing.recommendedPrices': 'Recommended Selling Prices',
