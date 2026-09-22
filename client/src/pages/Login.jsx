@@ -14,6 +14,7 @@ export default function Login() {
   const [form, setForm] = useState({ username: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   if (user) return <Navigate to={location.state?.from?.pathname || '/'} replace />;
 
@@ -56,13 +57,23 @@ export default function Login() {
             </label>
             <label className="block">
               <span className="label">{t('auth.password')}</span>
-              <input
-                type="password"
-                className="input"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                required
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  className="input pr-16"
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute inset-y-0 right-0 px-3 text-xs font-medium text-ink2 hover:text-ink"
+                  tabIndex={-1}
+                >
+                  {showPassword ? t('auth.hide') : t('auth.show')}
+                </button>
+              </div>
             </label>
             {error && <p className="text-sm font-medium text-rose-600">{error}</p>}
             <button type="submit" className="btn-primary w-full" disabled={loading}>

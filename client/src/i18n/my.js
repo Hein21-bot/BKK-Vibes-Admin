@@ -92,6 +92,8 @@ export const my = {
   'auth.username': 'အသုံးပြုသူအမည်',
   'auth.password': 'စကားဝှက်',
   'auth.signIn': 'ဝင်မည်',
+  'auth.show': 'ပြမည်',
+  'auth.hide': 'ဖျောက်မည်',
 
   'role.admin': 'အက်ဒမင်',
   'role.staff': 'ဝန်ထမ်း',
@@ -435,6 +437,8 @@ export const my = {
   'pricing.saveError': 'သိမ်း၍မရပါ — ပြန်ကြိုးစားရန် နှိပ်ပါ',
   'pricing.loadError': 'တွက်စက် ဒေတာကို ဖတ်၍မရပါ',
   'pricing.retry': 'ပြန်ကြိုးစားမည်',
+  'pricing.assumptionsUsed': 'သုံးနေသော Assumptions (Settings မှ)',
+  'pricing.assumptionsUsedHint': 'ဤကုန်ကျခန့်မှန်းချက်များသည် Assumptions & Tiers tab မှ လာပါသည်။ ပြောင်းလဲလိုပါက ထိုနေရာတွင် ပြောင်းပါ — ဤနေရာတွင် ချက်ချင်း ပြောင်းပါလိမ့်မည်။',
   'pricing.inputs': 'ထည့်သွင်းချက်များ',
   'pricing.calculation': 'တွက်ချက်မှု',
   'pricing.recommendedPrices': 'အကြံပြု ရောင်းဈေးများ',

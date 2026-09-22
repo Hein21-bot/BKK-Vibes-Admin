@@ -10,21 +10,15 @@ const TIER_USE = { LOW: 'pricing.tier.lowUse', NORMAL: 'pricing.tier.normalUse',
 export default function PriceCalculator({ assumptions, tiers, presets }) {
   const { t } = useI18n();
   const firstCat = presets[0]?.category ?? 'T-shirt';
+  // Only the fields for this one test item are kept here. Cost assumptions (cargo rate, fx, risk, …)
+  // always come live from the Assumptions & Tiers tab below, so a change there is reflected here
+  // immediately — there is no separate copy of them to fall out of sync.
   const initial = {
     product: 'Example: AIRism T-Shirt',
     category: firstCat,
     buyPriceTHB: 990,
     weightKg: presetWeight(firstCat, presets),
     weightAuto: true,
-    thLocalDelivery: assumptions.thLocalDelivery,
-    paymentFee: assumptions.paymentFee,
-    packaging: assumptions.packaging,
-    otherCost: assumptions.otherCost,
-    riskPct: assumptions.riskPct,
-    minProfit: assumptions.minProfit,
-    roundTo: assumptions.roundTo,
-    cargoRate: assumptions.cargoRate,
-    fx: assumptions.fx,
     marketPriceMMK: NaN,
   };
 
@@ -40,22 +34,11 @@ export default function PriceCalculator({ assumptions, tiers, presets }) {
           buyPriceTHB: s.buyPriceTHB,
           weightKg: effectiveWeight,
           marketPriceMMK: Number.isNaN(s.marketPriceMMK) ? null : s.marketPriceMMK,
-          overrides: {
-            cargoRate: s.cargoRate,
-            fx: s.fx,
-            thLocalDelivery: s.thLocalDelivery,
-            paymentFee: s.paymentFee,
-            packaging: s.packaging,
-            otherCost: s.otherCost,
-            riskPct: s.riskPct,
-            minProfit: s.minProfit,
-            roundTo: s.roundTo,
-          },
         },
         assumptions,
         tiers,
       ),
-    [s, effectiveWeight, assumptions, tiers],
+    [s.buyPriceTHB, s.marketPriceMMK, effectiveWeight, assumptions, tiers],
   );
 
   const categories = [...new Set([...presets.map((p) => p.category), s.category])];
@@ -103,21 +86,6 @@ export default function PriceCalculator({ assumptions, tiers, presets }) {
             <span className="mt-1 block text-xs text-ink2">{t('pricing.f.weightHint')}</span>
           </label>
 
-          <NumField label={t('pricing.f.cargoRate')} unit="THB/kg" value={s.cargoRate} step={10} onChange={(v) => set('cargoRate', v)} />
-          <NumField label={t('pricing.f.fx')} unit="MMK/THB" value={s.fx} step={1} onChange={(v) => set('fx', v)} />
-          <NumField label={t('pricing.f.thDelivery')} unit="THB" value={s.thLocalDelivery} onChange={(v) => set('thLocalDelivery', v)} />
-          <NumField label={t('pricing.f.payFee')} unit="THB" value={s.paymentFee} onChange={(v) => set('paymentFee', v)} />
-          <NumField label={t('pricing.f.packaging')} unit="MMK" value={s.packaging} step={50} onChange={(v) => set('packaging', v)} />
-          <NumField label={t('pricing.f.otherCost')} unit="MMK" value={s.otherCost} step={50} onChange={(v) => set('otherCost', v)} />
-          <NumField
-            label={t('pricing.f.risk')}
-            unit="% (3 = 0.03)"
-            value={+(s.riskPct * 100).toFixed(4)}
-            step={0.5}
-            onChange={(v) => set('riskPct', Number.isNaN(v) ? NaN : v / 100)}
-          />
-          <NumField label={t('pricing.f.minProfit')} unit="MMK / item" value={s.minProfit} step={500} onChange={(v) => set('minProfit', v)} />
-          <NumField label={t('pricing.f.rounding')} unit="MMK" value={s.roundTo} step={100} onChange={(v) => set('roundTo', v)} />
           <NumField
             label={t('pricing.f.marketPrice')}
             unit="MMK"
@@ -129,6 +97,23 @@ export default function PriceCalculator({ assumptions, tiers, presets }) {
         </div>
       </Section>
 
+      <div className="lg:col-span-2">
+        <Section title={t('pricing.assumptionsUsed')}>
+          <p className="mb-3 text-xs text-ink2">{t('pricing.assumptionsUsedHint')}</p>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <NumField label={t('pricing.f.cargoRate')} unit="THB/kg" value={assumptions.cargoRate} disabled onChange={() => {}} />
+            <NumField label={t('pricing.f.fx')} unit="MMK/THB" value={assumptions.fx} disabled onChange={() => {}} />
+            <NumField label={t('pricing.f.thDelivery')} unit="THB" value={assumptions.thLocalDelivery} disabled onChange={() => {}} />
+            <NumField label={t('pricing.f.payFee')} unit="THB" value={assumptions.paymentFee} disabled onChange={() => {}} />
+            <NumField label={t('pricing.f.packaging')} unit="MMK" value={assumptions.packaging} disabled onChange={() => {}} />
+            <NumField label={t('pricing.f.otherCost')} unit="MMK" value={assumptions.otherCost} disabled onChange={() => {}} />
+            <NumField label={t('pricing.f.risk')} unit="%" value={+(assumptions.riskPct * 100).toFixed(4)} disabled onChange={() => {}} />
+            <NumField label={t('pricing.f.minProfit')} unit="MMK / item" value={assumptions.minProfit} disabled onChange={() => {}} />
+            <NumField label={t('pricing.f.rounding')} unit="MMK" value={assumptions.roundTo} disabled onChange={() => {}} />
+          </div>
+        </Section>
+      </div>
+
       <div className="space-y-4">
         <Section title={t('pricing.calculation')}>
           <div>
@@ -136,7 +121,7 @@ export default function PriceCalculator({ assumptions, tiers, presets }) {
             <StatRow label={t('pricing.s.thTotal')} value={fmtTHB(result.thTotalCostTHB)} />
             <StatRow label={t('pricing.s.baseCost')} value={fmtMMK(result.baseCostMMK)} />
             <StatRow label={t('pricing.s.subtotal')} value={fmtMMK(result.subtotalLandedMMK)} />
-            <StatRow label={t('pricing.s.risk', { p: fmtPct(s.riskPct) })} value={fmtMMK(result.riskAllowanceMMK)} />
+            <StatRow label={t('pricing.s.risk', { p: fmtPct(assumptions.riskPct) })} value={fmtMMK(result.riskAllowanceMMK)} />
             <StatRow label={t('pricing.s.trueLanded')} value={fmtMMK(result.trueLandedCostMMK)} strong />
             <StatRow label={t('pricing.s.autoMarkup')} value={fmtPct(result.baseMarkup)} />
           </div>
