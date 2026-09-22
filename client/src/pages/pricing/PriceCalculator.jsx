@@ -97,23 +97,6 @@ export default function PriceCalculator({ assumptions, tiers, presets }) {
         </div>
       </Section>
 
-      <div className="lg:col-span-2">
-        <Section title={t('pricing.assumptionsUsed')}>
-          <p className="mb-3 text-xs text-ink2">{t('pricing.assumptionsUsedHint')}</p>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <NumField label={t('pricing.f.cargoRate')} unit="THB/kg" value={assumptions.cargoRate} disabled onChange={() => {}} />
-            <NumField label={t('pricing.f.fx')} unit="MMK/THB" value={assumptions.fx} disabled onChange={() => {}} />
-            <NumField label={t('pricing.f.thDelivery')} unit="THB" value={assumptions.thLocalDelivery} disabled onChange={() => {}} />
-            <NumField label={t('pricing.f.payFee')} unit="THB" value={assumptions.paymentFee} disabled onChange={() => {}} />
-            <NumField label={t('pricing.f.packaging')} unit="MMK" value={assumptions.packaging} disabled onChange={() => {}} />
-            <NumField label={t('pricing.f.otherCost')} unit="MMK" value={assumptions.otherCost} disabled onChange={() => {}} />
-            <NumField label={t('pricing.f.risk')} unit="%" value={+(assumptions.riskPct * 100).toFixed(4)} disabled onChange={() => {}} />
-            <NumField label={t('pricing.f.minProfit')} unit="MMK / item" value={assumptions.minProfit} disabled onChange={() => {}} />
-            <NumField label={t('pricing.f.rounding')} unit="MMK" value={assumptions.roundTo} disabled onChange={() => {}} />
-          </div>
-        </Section>
-      </div>
-
       <div className="space-y-4">
         <Section title={t('pricing.calculation')}>
           <div>

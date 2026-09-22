@@ -437,8 +437,6 @@ export const en = {
   'pricing.saveError': 'Could not save — click to retry',
   'pricing.loadError': 'Could not load the calculator data',
   'pricing.retry': 'Try again',
-  'pricing.assumptionsUsed': 'Assumptions used (from Settings)',
-  'pricing.assumptionsUsedHint': 'These cost assumptions come from the Assumptions & Tiers tab. Change them there — they update here immediately.',
   'pricing.inputs': 'Inputs',
   'pricing.calculation': 'Calculation',
   'pricing.recommendedPrices': 'Recommended Selling Prices',
