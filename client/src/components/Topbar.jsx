@@ -11,7 +11,11 @@ export function Topbar({ onMenu }) {
 
   return (
     <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-edge bg-panel px-4 print:hidden">
-      <button className="text-ink2 lg:hidden" onClick={onMenu} aria-label="Menu">
+      <button
+        className="-ml-2 rounded-lg p-2 text-3xl leading-none text-ink2 hover:bg-panel2 lg:hidden"
+        onClick={onMenu}
+        aria-label="Menu"
+      >
         ☰
       </button>
       <div className="flex-1" />
