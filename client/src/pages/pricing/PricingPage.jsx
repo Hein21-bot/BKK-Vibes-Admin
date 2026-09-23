@@ -109,13 +109,27 @@ function PricingContent() {
         ))}
       </div>
 
-      {tab === 'price' && <PriceCalculator {...shared} setAssumptions={setAssumptions} locked={locked} />}
-      {tab === 'batch' && <BatchCalculator {...shared} />}
-      {tab === 'weights' && (
+      {/*
+        Every tab stays mounted the whole time you're on this page — only the CSS visibility
+        toggles. Each calculator keeps its own unsaved edits in its own React state (usePricingState),
+        which only syncs from the database once, when the tab first mounts. If a tab unmounted on
+        every switch (the old `tab === 'x' && <X/>` pattern), switching away and back before its
+        600ms autosave had finished writing would remount it from the last-loaded snapshot and an
+        edit could appear to "revert" — even though the save had gone through underneath.
+      */}
+      <div className={tab === 'price' ? '' : 'hidden'}>
+        <PriceCalculator {...shared} setAssumptions={setAssumptions} locked={locked} />
+      </div>
+      <div className={tab === 'batch' ? '' : 'hidden'}>
+        <BatchCalculator {...shared} />
+      </div>
+      <div className={tab === 'weights' ? '' : 'hidden'}>
         <WeightReference presets={presets} setPresets={setPresets} cargoRate={assumptions.cargoRate} />
-      )}
-      {tab === 'market' && <MarketReference />}
-      {tab === 'settings' && (
+      </div>
+      <div className={tab === 'market' ? '' : 'hidden'}>
+        <MarketReference />
+      </div>
+      <div className={tab === 'settings' ? '' : 'hidden'}>
         <SettingsPanel
           assumptions={assumptions}
           setAssumptions={setAssumptions}
@@ -124,7 +138,7 @@ function PricingContent() {
           locked={locked}
           setLocked={setLocked}
         />
-      )}
+      </div>
 
       <p className="mt-6 text-xs text-ink2">{t('pricing.footer')}</p>
     </div>
