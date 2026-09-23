@@ -87,6 +87,7 @@ model CargoBatch {
   createdBy       String?     @map("created_by")
 
   orders          Order[]
+  expenses        Expense[]
 
   @@index([status])
   @@map("cargo_batches")
@@ -184,11 +185,17 @@ model Expense {
   expenseDate     DateTime        @default(now()) @map("expense_date")
   paid            Boolean         @default(false)
   note            String?
+  // Optional: which cargo batch this cost belongs to (e.g. transportation, cargo fee paid
+  // separately). Counted as part of that batch's cost on the Batch Profit page.
+  cargoBatchId    Int?            @map("cargo_batch_id")
   createdBy       String?         @map("created_by")
   createdDatetime DateTime        @default(now()) @map("created_datetime")
 
+  cargoBatch      CargoBatch?     @relation(fields: [cargoBatchId], references: [cargoId], onDelete: SetNull)
+
   @@index([category])
   @@index([expenseDate])
+  @@index([cargoBatchId])
   @@map("expenses")
 }
 

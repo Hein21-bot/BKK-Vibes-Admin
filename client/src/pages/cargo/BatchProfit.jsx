@@ -62,6 +62,7 @@ export default function BatchProfit() {
               <Th>{t('profit.revenue')}</Th>
               <Th>{t('profit.productCost')}</Th>
               <Th>{t('profit.cargoFee')}</Th>
+              <Th>{t('profit.otherExpenses')}</Th>
               <Th>{t('profit.fx')}</Th>
               <Th>{t('profit.totalCost')}</Th>
               <Th>{t('profit.profit')}</Th>
@@ -70,7 +71,7 @@ export default function BatchProfit() {
             </tr>
           </THead>
           <TBody>
-            {rows.length === 0 && <EmptyRow colSpan={11} />}
+            {rows.length === 0 && <EmptyRow colSpan={12} />}
             {rows.map((r) => (
               <tr key={r.cargoId} className="hover:bg-panel2">
                 <Td>
@@ -94,6 +95,20 @@ export default function BatchProfit() {
                   {r.costMissing ? <span className="text-amber-600">⚠️ {t('profit.enterCost')}</span> : baht(r.productCostThb)}
                 </Td>
                 <Td className="whitespace-nowrap">{baht(r.cargoFeeThb)}</Td>
+                <Td className="whitespace-nowrap">
+                  {r.expenseCount > 0 ? (
+                    <Link to={`/cargo/${r.cargoId}`} className="text-brand-600">
+                      {money(r.expensesMmk)}
+                      {r.unpaidExpenseCount > 0 && (
+                        <span className="ml-1 text-xs text-amber-600" title={t('profit.unpaidExpHint', { n: r.unpaidExpenseCount })}>
+                          ({t('profit.unpaid', { n: r.unpaidExpenseCount })})
+                        </span>
+                      )}
+                    </Link>
+                  ) : (
+                    <span className="text-ink2">—</span>
+                  )}
+                </Td>
                 <Td className="whitespace-nowrap text-ink2">
                   {r.fxUsed.toLocaleString('en-US', { maximumFractionDigits: 4 })}
                   {r.fxRate == null && <span className="ml-1 text-xs">({t('profit.default')})</span>}
@@ -145,7 +160,7 @@ function CostModal({ row, defaultFx, onClose, onSaved }) {
 
   const productThb = Number.isFinite(product) ? product : 0;
   const fxUsed = Number.isFinite(fx) && fx > 0 ? fx : defaultFx;
-  const costMmk = (productThb + row.cargoFeeThb) * fxUsed;
+  const costMmk = (productThb + row.cargoFeeThb) * fxUsed + row.expensesMmk;
   const profit = row.revenue - costMmk;
 
   const save = async () => {
@@ -202,9 +217,13 @@ function CostModal({ row, defaultFx, onClose, onSaved }) {
             {t('profit.revenue')}: <span className="font-semibold">{money(row.revenue)}</span>
           </p>
           <p>
-            {t('profit.totalCost')}: ({baht(productThb)} + {baht(row.cargoFeeThb)}) × {fxUsed} ={' '}
+            {t('profit.totalCost')}: ({baht(productThb)} + {baht(row.cargoFeeThb)}) × {fxUsed}
+            {row.expensesMmk > 0 && <> + {money(row.expensesMmk)}</>} ={' '}
             <span className="font-semibold">{money(costMmk)}</span>
           </p>
+          {row.expensesMmk > 0 && (
+            <p className="text-xs text-ink2">{t('profit.otherExpensesHint', { v: money(row.expensesMmk) })}</p>
+          )}
           <p>
             {t('profit.profit')}: <span className={clsx('text-base font-bold', profitColor(profit))}>{money(profit)}</span>
           </p>

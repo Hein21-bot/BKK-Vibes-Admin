@@ -6,13 +6,13 @@ import { useToast } from '../../components/ui/Toast.jsx';
 import { useI18n } from '../../i18n/I18nContext.jsx';
 import { PageHeader } from '../../components/ui/PageHeader.jsx';
 import { PageLoader } from '../../components/ui/Spinner.jsx';
-import { StatusBadge, PaidBadge } from '../../components/ui/Badge.jsx';
+import { StatusBadge, PaidBadge, Badge } from '../../components/ui/Badge.jsx';
 import { Table, THead, TBody, Th, Td, EmptyRow } from '../../components/ui/Table.jsx';
 import { Modal } from '../../components/ui/Modal.jsx';
 import { SelectInput } from '../../components/ui/Field.jsx';
 import { CargoForm } from './CargoForm.jsx';
-import { ORDER_STATUSES } from '../../lib/constants.js';
-import { money, baht, dateTime } from '../../lib/format.js';
+import { ORDER_STATUSES, EXPENSE_CATEGORY_COLORS } from '../../lib/constants.js';
+import { money, baht, dateOnly, dateTime } from '../../lib/format.js';
 
 export default function CargoDetail() {
   const { id } = useParams();
@@ -25,14 +25,22 @@ export default function CargoDetail() {
   const [selected, setSelected] = useState([]);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkStatus, setBulkStatus] = useState('');
+  const [expAddOpen, setExpAddOpen] = useState(false);
+  const [expSelected, setExpSelected] = useState([]);
 
   if (loading) return <PageLoader />;
   if (error) return <p className="text-rose-600">{error}</p>;
 
   const orders = batch.orders;
+  const expenses = batch.expenses;
+  const expensesTotal = expenses.reduce((s, e) => s + e.amount, 0);
   const allChecked = orders.length > 0 && selected.length === orders.length;
   const toggleAll = () => setSelected(allChecked ? [] : orders.map((o) => o.orderId));
   const toggle = (oid) => setSelected((s) => (s.includes(oid) ? s.filter((x) => x !== oid) : [...s, oid]));
+
+  const expAllChecked = expenses.length > 0 && expSelected.length === expenses.length;
+  const toggleExpAll = () => setExpSelected(expAllChecked ? [] : expenses.map((e) => e.expenseId));
+  const toggleExp = (eid) => setExpSelected((s) => (s.includes(eid) ? s.filter((x) => x !== eid) : [...s, eid]));
 
   const applyBulkStatus = async () => {
     if (!bulkStatus) return toast.error(t('cargoDetail.pickStatus'));
@@ -54,6 +62,18 @@ export default function CargoDetail() {
       const { data } = await api.delete(`/cargo/${id}/orders`, { data: { orderIds: selected } });
       toast.success(t('toast.removedN', { n: data.removed }));
       setSelected([]);
+      reload();
+    } catch (e) {
+      toast.error(apiErrorMessage(e));
+    }
+  };
+
+  const removeExpSelected = async () => {
+    if (!confirm(t('cargoDetail.confirmRemoveExp', { n: expSelected.length }))) return;
+    try {
+      const { data } = await api.delete(`/cargo/${id}/expenses`, { data: { expenseIds: expSelected } });
+      toast.success(t('toast.removedExpensesN', { n: data.removed }));
+      setExpSelected([]);
       reload();
     } catch (e) {
       toast.error(apiErrorMessage(e));
@@ -94,6 +114,7 @@ export default function CargoDetail() {
         <Info label={t('cargoDetail.rate')} value={baht(batch.cargoRate)} />
         <Info label={t('cargoDetail.totalCost')} value={baht(batch.totalPrice)} />
         <Info label={t('cargoDetail.ordersInBatch')} value={orders.length} />
+        <Info label={t('cargoDetail.expensesTotal')} value={money(expensesTotal)} />
         <Info label={t('cargoDetail.departure')} value={dateTime(batch.departureDate)} />
         <Info label={t('cargoDetail.arrival')} value={dateTime(batch.arrivalDate)} />
         <Info label={t('cargoDetail.note')} value={batch.note || '—'} />
@@ -175,9 +196,70 @@ export default function CargoDetail() {
         </Table>
       </div>
 
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold text-ink">
+          {t('cargoDetail.expensesHeading', { n: expenses.length })}
+        </h3>
+        <button className="btn-primary py-1.5" onClick={() => setExpAddOpen(true)}>
+          {t('cargoDetail.addExpenses')}
+        </button>
+      </div>
+
+      {expSelected.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-brand-200 bg-brand-50 px-4 py-2.5 text-sm dark:border-brand-500/30 dark:bg-brand-500/10">
+          <span className="font-medium text-brand-800 dark:text-brand-200">
+            {t('orders.selected', { n: expSelected.length })}
+          </span>
+          <button className="btn-secondary py-1.5" onClick={removeExpSelected}>
+            {t('cargoDetail.removeFromBatch')}
+          </button>
+        </div>
+      )}
+
+      <div className="card mt-3">
+        <Table>
+          <THead>
+            <tr>
+              <Th className="w-10">
+                <input type="checkbox" checked={expAllChecked} onChange={toggleExpAll} />
+              </Th>
+              <Th>{t('expenses.date')}</Th>
+              <Th>{t('expenses.title_field')}</Th>
+              <Th>{t('expenses.category')}</Th>
+              <Th>{t('expenses.amount')}</Th>
+              <Th>{t('expenses.status')}</Th>
+            </tr>
+          </THead>
+          <TBody>
+            {expenses.length === 0 && <EmptyRow colSpan={6}>{t('cargoDetail.noExpenses')}</EmptyRow>}
+            {expenses.map((e) => (
+              <tr key={e.expenseId} className="hover:bg-panel2">
+                <Td>
+                  <input type="checkbox" checked={expSelected.includes(e.expenseId)} onChange={() => toggleExp(e.expenseId)} />
+                </Td>
+                <Td className="whitespace-nowrap text-ink2">{dateOnly(e.expenseDate)}</Td>
+                <Td>
+                  <div className="font-medium text-ink">{e.title}</div>
+                  {e.note && <div className="text-xs text-ink2">{e.note}</div>}
+                </Td>
+                <Td>
+                  <Badge className={EXPENSE_CATEGORY_COLORS[e.category]}>{t(`cat.${e.category}`)}</Badge>
+                </Td>
+                <Td className="font-medium">{money(e.amount)}</Td>
+                <Td>
+                  <PaidBadge paid={e.paid} />
+                </Td>
+              </tr>
+            ))}
+          </TBody>
+        </Table>
+      </div>
+
       <CargoForm open={editOpen} onClose={() => setEditOpen(false)} batch={batch} onSaved={reload} />
 
       <AddOrdersModal open={addOpen} onClose={() => setAddOpen(false)} cargoId={id} onDone={reload} />
+
+      <AddExpensesModal open={expAddOpen} onClose={() => setExpAddOpen(false)} cargoId={id} onDone={reload} />
 
       <Modal
         open={bulkOpen}
@@ -353,6 +435,139 @@ function AddOrdersModal({ open, onClose, cargoId, onDone }) {
         <p className="mt-2 text-xs text-ink2">{t('cargoDetail.showingOf', { n: rows.length, total })}</p>
       )}
       {notReady > 0 && <p className="mt-2 text-xs text-amber-600">⚠️ {t('cargoDetail.notReadyWarn', { n: notReady })}</p>}
+    </Modal>
+  );
+}
+
+function AddExpensesModal({ open, onClose, cargoId, onDone }) {
+  const toast = useToast();
+  const { t } = useI18n();
+  const [search, setSearch] = useState('');
+  const [rows, setRows] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [picked, setPicked] = useState([]);
+  const [saving, setSaving] = useState(false);
+
+  const load = () => {
+    setLoading(true);
+    api
+      .get('/expenses', { params: { unassigned: 'true', search, pageSize: 100 } })
+      .then((r) => {
+        setRows(r.data.data);
+        setTotal(r.data.pagination.total);
+      })
+      .catch((e) => toast.error(apiErrorMessage(e)))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    if (open) {
+      setPicked([]);
+      setSearch('');
+      load();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const toggle = (id) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
+
+  const submit = async (ids = picked) => {
+    if (!ids.length) return toast.error(t('cargoDetail.pickExpenses'));
+    setSaving(true);
+    try {
+      const { data } = await api.post(`/cargo/${cargoId}/expenses`, { expenseIds: ids });
+      toast.success(t('toast.addedExpensesN', { n: data.added }));
+      onDone();
+      onClose();
+    } catch (e) {
+      toast.error(apiErrorMessage(e));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const addAll = () => {
+    if (confirm(t('cargoDetail.confirmAddAll', { n: rows.length }))) submit(rows.map((e) => e.expenseId));
+  };
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      size="lg"
+      title={t('cargoDetail.addExpModalTitle')}
+      footer={
+        <>
+          <button className="btn-secondary" onClick={onClose}>
+            {t('common.cancel')}
+          </button>
+          <button className="btn-secondary" onClick={addAll} disabled={saving || loading || rows.length === 0}>
+            {t('cargoDetail.addAll', { n: rows.length })}
+          </button>
+          <button className="btn-primary" onClick={() => submit()} disabled={saving}>
+            {saving ? t('common.saving') : t('cargoDetail.addNExpenses', { n: picked.length || '' })}
+          </button>
+        </>
+      }
+    >
+      <form
+        className="mb-3 flex gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          load();
+        }}
+      >
+        <input
+          className="input"
+          placeholder={t('cargoDetail.addExpSearchPlaceholder')}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <button className="btn-secondary">{t('common.search')}</button>
+      </form>
+
+      <div className="max-h-80 overflow-y-auto rounded-lg border border-edge">
+        <Table>
+          <THead>
+            <tr>
+              <Th className="w-10" />
+              <Th>{t('expenses.date')}</Th>
+              <Th>{t('expenses.title_field')}</Th>
+              <Th>{t('expenses.category')}</Th>
+              <Th>{t('expenses.amount')}</Th>
+              <Th>{t('expenses.status')}</Th>
+            </tr>
+          </THead>
+          <TBody>
+            {loading && <EmptyRow colSpan={6}>{t('common.loading')}</EmptyRow>}
+            {!loading && rows.length === 0 && <EmptyRow colSpan={6}>{t('cargoDetail.noUnassignedExp')}</EmptyRow>}
+            {!loading &&
+              rows.map((e) => (
+                <tr key={e.expenseId} className="cursor-pointer hover:bg-panel2" onClick={() => toggle(e.expenseId)}>
+                  <Td>
+                    <input type="checkbox" readOnly checked={picked.includes(e.expenseId)} />
+                  </Td>
+                  <Td className="whitespace-nowrap text-ink2">{dateOnly(e.expenseDate)}</Td>
+                  <Td>
+                    <div className="font-medium text-ink">{e.title}</div>
+                    {e.note && <div className="text-xs text-ink2">{e.note}</div>}
+                  </Td>
+                  <Td>
+                    <Badge className={EXPENSE_CATEGORY_COLORS[e.category]}>{t(`cat.${e.category}`)}</Badge>
+                  </Td>
+                  <Td className="font-medium">{money(e.amount)}</Td>
+                  <Td>
+                    <PaidBadge paid={e.paid} />
+                  </Td>
+                </tr>
+              ))}
+          </TBody>
+        </Table>
+      </div>
+      {total > rows.length && (
+        <p className="mt-2 text-xs text-ink2">{t('cargoDetail.showingOfExp', { n: rows.length, total })}</p>
+      )}
     </Modal>
   );
 }

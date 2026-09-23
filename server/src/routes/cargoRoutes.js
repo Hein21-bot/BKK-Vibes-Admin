@@ -16,5 +16,7 @@ r.put('/:id', c.updateCargo);
 r.delete('/:id', c.deleteCargo);
 r.post('/:id/orders', c.addOrdersToCargo);
 r.delete('/:id/orders', c.removeOrdersFromCargo);
+r.post('/:id/expenses', c.addExpensesToCargo);
+r.delete('/:id/expenses', c.removeExpensesFromCargo);
 
 export default r;

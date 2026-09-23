@@ -29,6 +29,8 @@ function buildWhere(q) {
   if (q.category) where.category = { in: String(q.category).split(',') };
   if (q.paid === 'true') where.paid = true;
   if (q.paid === 'false') where.paid = false;
+  if (q.unassigned === 'true') where.cargoBatchId = null;
+  if (q.cargoBatchId) where.cargoBatchId = Number(q.cargoBatchId);
   if (q.dateFrom || q.dateTo) {
     where.expenseDate = {};
     if (q.dateFrom) where.expenseDate.gte = new Date(q.dateFrom);
@@ -48,13 +50,24 @@ function buildWhere(q) {
   return where;
 }
 
-const serialize = (e) => ({ ...e, amount: Number(e.amount) });
+const serialize = (e) => ({
+  ...e,
+  amount: Number(e.amount),
+  cargoBatchCode: e.cargoBatch?.cargoBatchCode ?? null,
+  cargoBatch: undefined,
+});
 
 export const listExpenses = asyncHandler(async (req, res) => {
   const { page, pageSize, skip, take } = parsePagination(req.query);
   const where = buildWhere(req.query);
   const [rows, total, totals, paidAgg] = await Promise.all([
-    prisma.expense.findMany({ where, skip, take, orderBy: { expenseDate: 'desc' } }),
+    prisma.expense.findMany({
+      where,
+      skip,
+      take,
+      orderBy: { expenseDate: 'desc' },
+      include: { cargoBatch: { select: { cargoBatchCode: true } } },
+    }),
     prisma.expense.count({ where }),
     prisma.expense.aggregate({ _sum: { amount: true }, where }),
     prisma.expense.aggregate({ _sum: { amount: true }, where: { ...where, paid: true } }),
@@ -107,6 +120,7 @@ export const exportExpenses = asyncHandler(async (req, res) => {
   const rows = await prisma.expense.findMany({
     where: buildWhere(req.query),
     orderBy: { expenseDate: 'desc' },
+    include: { cargoBatch: { select: { cargoBatchCode: true } } },
   });
   await sendExport(res, {
     format: req.query.format === 'xlsx' ? 'xlsx' : 'csv',
@@ -118,6 +132,7 @@ export const exportExpenses = asyncHandler(async (req, res) => {
       { key: 'category', header: 'Category' },
       { key: 'amount', header: 'Amount' },
       { key: 'paid', header: 'Paid' },
+      { key: 'cargoBatchCode', header: 'Cargo Batch' },
       { key: 'note', header: 'Note' },
     ],
     rows: rows.map((e) => ({
@@ -125,6 +140,7 @@ export const exportExpenses = asyncHandler(async (req, res) => {
       expenseDate: e.expenseDate.toISOString(),
       title: e.title,
       category: e.category,
+      cargoBatchCode: e.cargoBatch?.cargoBatchCode || '',
       amount: Number(e.amount),
       paid: e.paid ? 'yes' : 'no',
       note: e.note || '',

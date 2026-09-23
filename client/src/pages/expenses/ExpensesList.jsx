@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api, apiErrorMessage, downloadFile } from '../../api/client.js';
 import { useToast } from '../../components/ui/Toast.jsx';
 import { useI18n } from '../../i18n/I18nContext.jsx';
@@ -187,11 +188,12 @@ export default function ExpensesList() {
                 <Th>{t('expenses.category')}</Th>
                 <Th>{t('expenses.amount')}</Th>
                 <Th>{t('expenses.status')}</Th>
+                <Th>{t('col.batch')}</Th>
                 <Th />
               </tr>
             </THead>
             <TBody>
-              {rows.length === 0 && <EmptyRow colSpan={6} />}
+              {rows.length === 0 && <EmptyRow colSpan={7} />}
               {rows.map((e) => (
                 <tr key={e.expenseId} className="hover:bg-panel2">
                   <Td className="whitespace-nowrap text-ink2">{dateOnly(e.expenseDate)}</Td>
@@ -207,6 +209,15 @@ export default function ExpensesList() {
                     <button onClick={() => togglePaid(e)} title={t('expenses.markPaid')}>
                       <PaidBadge paid={e.paid} />
                     </button>
+                  </Td>
+                  <Td className="whitespace-nowrap">
+                    {e.cargoBatchId ? (
+                      <Link to={`/cargo/${e.cargoBatchId}`} className="font-medium text-brand-600">
+                        {e.cargoBatchCode}
+                      </Link>
+                    ) : (
+                      <span className="text-ink2">—</span>
+                    )}
                   </Td>
                   <Td>
                     <div className="flex gap-3">

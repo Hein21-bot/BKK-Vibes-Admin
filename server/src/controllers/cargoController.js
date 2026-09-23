@@ -79,6 +79,7 @@ export const getCargo = asyncHandler(async (req, res) => {
         orderBy: { orderId: 'asc' },
         include: { items: { select: { quantity: true } } },
       },
+      expenses: { orderBy: { expenseDate: 'desc' } },
     },
   });
   if (!cargo) throw new ApiError(404, 'Cargo batch not found');
@@ -93,6 +94,15 @@ export const getCargo = asyncHandler(async (req, res) => {
       totalAmount: Number(o.totalAmount),
       trackingNumber: o.trackingNumber,
       units: o.items.reduce((s, i) => s + i.quantity, 0),
+    })),
+    expenses: cargo.expenses.map((e) => ({
+      expenseId: e.expenseId,
+      title: e.title,
+      category: e.category,
+      amount: Number(e.amount),
+      expenseDate: e.expenseDate,
+      paid: e.paid,
+      note: e.note,
     })),
   });
 });
@@ -178,6 +188,30 @@ export const removeOrdersFromCargo = asyncHandler(async (req, res) => {
   const r = await prisma.order.updateMany({
     where: { orderId: { in: orderIds }, cargoBatchId: Number(req.params.id) },
     data: { cargoBatchId: null, status: 'pending' },
+  });
+  res.json({ removed: r.count });
+});
+
+// Attach / detach expenses to a batch (bulk) — same shape as orders above. An expense linked to a
+// batch counts toward that batch's cost on the Batch Profit page.
+const expenseLinkSchema = z.object({ expenseIds: z.array(z.number().int().positive()).min(1) });
+
+export const addExpensesToCargo = asyncHandler(async (req, res) => {
+  const cargoId = Number(req.params.id);
+  const { expenseIds } = expenseLinkSchema.parse(req.body);
+  await prisma.cargoBatch.findUniqueOrThrow({ where: { cargoId } });
+  const r = await prisma.expense.updateMany({
+    where: { expenseId: { in: expenseIds } },
+    data: { cargoBatchId: cargoId },
+  });
+  res.json({ added: r.count });
+});
+
+export const removeExpensesFromCargo = asyncHandler(async (req, res) => {
+  const { expenseIds } = expenseLinkSchema.parse(req.body);
+  const r = await prisma.expense.updateMany({
+    where: { expenseId: { in: expenseIds }, cargoBatchId: Number(req.params.id) },
+    data: { cargoBatchId: null },
   });
   res.json({ removed: r.count });
 });
